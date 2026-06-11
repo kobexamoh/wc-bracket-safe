@@ -4,6 +4,10 @@
   --light-gray: #f5f5f5;
   --border: #ddd;
   --text: #333;
+  /* University of Alberta brand colours */
+  --ua-green: #007A33;
+  --ua-dark-green: #275D38;
+  --ua-gold: #F2CD00;
 }
 
 * {
@@ -21,7 +25,7 @@ body {
 }
 
 header {
-  background-color: var(--navy);
+  background-color: var(--ua-green);
   color: white;
   padding: 20px;
   text-align: center;
@@ -36,7 +40,7 @@ header h1 {
 }
 
 header p {
-  color: var(--gold);
+  color: var(--ua-gold);
   font-size: 0.9rem;
 }
 

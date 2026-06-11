@@ -110,6 +110,14 @@ async function handleSave() {
     showAlert('❌ Please sign in before saving', 'error');
     return;
   }
+  // Require at least the advancing pair (2) in every group before saving.
+  const incomplete = getGroupOrder().filter((code) => (picks[code]?.length || 0) < ADVANCE_COUNT);
+  if (incomplete.length) {
+    const list = incomplete.slice(0, 4).map((code) => `Group ${code}`).join(', ');
+    const more = incomplete.length > 4 ? `, +${incomplete.length - 4} more` : '';
+    showAlert(`❌ Pick ${ADVANCE_COUNT} teams in every group before saving — still need: ${list}${more}`, 'error');
+    return;
+  }
   if (saveBtn) {
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving…';
