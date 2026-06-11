@@ -22,6 +22,7 @@ const supabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
 let currentUser = null;
 let picks = {}; // { [groupCode]: [teamName, ...] } ordered 1st -> 4th
 let savedSnapshot = '{}'; // JSON of last persisted picks, for unsaved-change detection
+let loadedUserId = null; // guards against reloading (and clobbering unsaved picks) on tab refocus
 let otpLastSentAt = 0;
 
 // ============================================
@@ -186,6 +187,7 @@ async function handleLogout() {
     currentUser = null;
     picks = {};
     savedSnapshot = '{}';
+    loadedUserId = null;
     showAuthSection();
     showAlert('✅ Signed out', 'success');
   } catch (err) {
@@ -221,12 +223,16 @@ async function checkAuth() {
 
 async function loadBracket() {
   if (!currentUser) return;
+  // Supabase fires auth events (e.g. token refresh) when the tab regains focus.
+  // Load from the DB only once per user so we never clobber unsaved picks.
+  if (loadedUserId === currentUser.id) return;
 
   renderBracketUI(); // show the interactive bracket immediately
 
   try {
     picks = await loadPicks(supabase, currentUser.id);
     savedSnapshot = JSON.stringify(picks);
+    loadedUserId = currentUser.id;
     renderBracketUI();
     setSaveStatus(Object.keys(picks).length ? 'Loaded your saved bracket' : '');
   } catch (err) {
