@@ -26,3 +26,6 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Project notes (local only - avoids exposing file paths)
+PROJECT_STATE.md

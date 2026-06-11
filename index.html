@@ -28,14 +28,32 @@
                         style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px;"
                     >
                 </div>
-                <button type="submit" class="btn">Sign In with Email</button>
+                <button id="loginBtn" type="submit" class="btn">Sign In with Email</button>
             </form>
         </div>
 
         <!-- Bracket Section -->
         <div id="bracketSection" style="display: none;">
-            <div id="userInfo" style="margin-bottom: 20px; padding: 10px; background: #e3f2fd; border-radius: 4px;"></div>
+            <div id="userInfo" class="user-info"></div>
+
+            <div class="bracket-toolbar">
+                <div class="bracket-progress">
+                    <span id="progressText" class="progress-text">0 / 12 groups set</span>
+                    <div class="progress-track"><div id="progressBar" class="progress-fill"></div></div>
+                </div>
+                <div class="bracket-actions">
+                    <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
+                    <button id="saveBtn" type="button" class="btn btn-primary">Save bracket</button>
+                </div>
+            </div>
+
+            <div class="panel-header">
+                <h2>Group Stage</h2>
+                <p>Tap teams to rank them 1st–4th. Your top 2 in each group advance.</p>
+            </div>
+
             <div id="bracket"></div>
+
             <button id="logoutBtn" class="btn" style="margin-top: 20px;">Sign Out</button>
         </div>
 
