@@ -1,190 +1,148 @@
-# 2026 World Cup Bracket Predictor - Work Safe Edition ⚽
+# ⚽ World Cup Bracket Pool — Work-Safe Edition
 
-A **secure, refactored version** of the bracket predictor that:
-- ✅ Keeps API credentials out of git
-- ✅ Uses environment variables for secrets
-- ✅ Sanitizes all user input (prevents XSS)
-- ✅ Split into modular files (easier to maintain)
-- ✅ Ready for team use at work
+A small, deliberately secure web app where coworkers sign in with their email, rank the twelve groups of the 2026 World Cup, and save a bracket nobody else can tamper with.
+
+> The following is a README — a word which here means *"the true and only slightly dramatized account of how a thing got built, accompanied by instructions so that Future Me is not betrayed by Past Me."* If you are looking for a quiet, sensible README that simply lists commands, I am sorry to report you have come to the wrong file. The commands are here. They are just keeping unusual company.
 
 ---
 
-## 🔒 Security Changes Made
+## What It Actually Is
 
-### Problem: Original had hardcoded secrets
-```javascript
-// ❌ UNSAFE - Original code
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
-```
+A single-page app for a friendly office World Cup pool:
 
-### Solution: Environment variables
-```javascript
-// ✅ SAFE - This version
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-// Loaded from .env.local (never committed to git)
-```
+- **Sign in with an email magic link.** No passwords to forget, no accounts to manage.
+- **Rank each group by clicking.** First click crowns 1st, the next 2nd, and so on through 4th. Click a team again to dethrone it; the rest politely shuffle up. The top two in every group are marked **Advances**.
+- **Save your bracket.** It lands in a database row that is yours and yours alone — enforced by the server, not by good manners.
+- **Come back later.** Your picks are waiting, exactly where you left them.
 
-### Other improvements:
-- ✅ Input sanitization (no XSS)
-- ✅ Email redaction (GDPR compliance)
-- ✅ Modular code structure
-- ✅ Removed massive email blocklist (~200KB)
-- ✅ Removed personal GA tracking
+That's the whole job. It does that job and then stops, which is more than can be said for most software.
 
 ---
 
-## 🚀 Setup Instructions
+## I. In Which a View-Source Rip Becomes a Problem
 
-### 1. Get your Supabase credentials
-Go to [supabase.com](https://supabase.com) and create a free project:
-- Create account (free tier included)
-- Create new project
-- Go to **Settings → API**
-- Copy `Project URL` and `anon public key`
+It began, as these things do, with a bracket simulator someone else had built and left lying around the internet with its engine running and its doors unlocked. I admired it. I right-clicked it. I selected **View Source**, and — reader — I took the whole thing home in my pockets: roughly nine thousand lines of HTML with the Supabase keys sitting right there in the open, like a spare house key under a mat labeled SPARE HOUSE KEY.
 
-### 2. Create `.env.local` (never committed)
-```bash
-cp .env.example .env.local
-```
+It worked. It was also a small security incident waiting politely for someone to notice it.
 
-Edit `.env.local`:
-```
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
+## II. In Which an IDE and I Stop Seeing Eye to Eye
 
-**⚠️ WARNING:** `.env.local` is in `.gitignore` — it will NOT be committed. This is intentional.
+The plan was sensible: feed the giant file to an editor, ask it to make the thing *modular* and *safe*, and redeploy. The plan produced a Supabase project, a Vercel URL, and a folder full of half-finished good intentions. It did not produce a working app. (It also, at one memorable juncture, suggested I go set up Google Cloud OAuth at midnight. I did not.)
 
-### 3. Install dependencies
-```bash
-npm install
-```
+## III. In Which the Whole Thing Gets Rebuilt Before Kickoff
 
-### 4. Run locally
-```bash
-npm run dev
-```
+So it was rebuilt — properly this time — in the small hours before the tournament's opening match. The hardcoded keys were marched into environment variables. The nine-thousand-line monolith was broken into files a human can actually read. The bracket learned to be *clicked*. And the database was taught, firmly, that everyone may keep a bracket but no one may read anyone else's.
 
-Opens at `http://localhost:3000`
+It shipped. The opener was at 1pm. We made it with hours to spare, which in software terms is roughly a decade.
 
 ---
 
-## 📁 Project Structure
+## The Stack
+
+- **Frontend:** plain JavaScript + [Vite](https://vitejs.dev/). No framework, because the job didn't need one.
+- **Auth + database:** [Supabase](https://supabase.com/) — email magic-link sign-in and a single Postgres table guarded by Row-Level Security.
+- **Auth emails:** a custom SMTP provider ([Resend](https://resend.com/)) on a subdomain you control, because Supabase's built-in mailer is rate-limited and will tap out the moment a dozen coworkers log in at once.
+- **Hosting:** [Vercel](https://vercel.com/), redeploying on every push.
+- **Tests:** Node's built-in test runner. No dependencies, no ceremony.
 
 ```
 wc-bracket-safe/
+├── index.html              # markup + the SVG soccer-ball favicon
 ├── src/
-│   ├── config/
-│   │   └── supabase.js         # Config with env vars (NOT committed)
+│   ├── config/supabase.js  # reads keys from env vars (never hardcoded)
 │   ├── js/
-│   │   ├── app.js              # Main app logic
-│   │   └── sanitize.js         # Input sanitization utils
-│   └── styles/
-│       └── styles.css          # Global styles
-├── index.html                  # HTML template (no secrets)
-├── package.json                # Dependencies
-├── vite.config.js              # Build config
-├── .env.example                # Template for .env.local
-├── .gitignore                  # Secrets protected
-└── README.md                   # This file
+│   │   ├── app.js          # auth flow + interactive bracket wiring
+│   │   ├── authUtils.js    # the "stop spamming the login button" cooldown
+│   │   ├── bracketData.js  # the 48 teams, 12 groups, and the renderer
+│   │   ├── bracketStore.js # load / save / validate picks
+│   │   └── sanitize.js     # input scrubbing + email redaction
+│   └── styles/styles.css   # U of A green + gold
+└── test/                   # unit tests for the bits worth trusting
 ```
 
-**Key principle:** Anything with secrets goes in `.env.local` → loaded at runtime → never in git history.
+---
+
+## A Word on Security (the Genuinely Serious Bit)
+
+The personality stops here, briefly, because this part matters.
+
+- **No secrets in the repo.** Keys live in `.env.local` (gitignored) and in Vercel's environment settings. The git history was scanned to confirm nothing leaked during the chaos.
+- **The anon key is *meant* to be public.** It ships in the browser bundle no matter what you do. The thing actually protecting people's brackets is **Row-Level Security** — database policies that let each signed-in user read and write only their own row.
+- **Inputs are sanitized** and dynamic values are rendered with `textContent`, not `innerHTML`, so a cheeky team name can't become a script tag.
+- **Saved picks are validated server-side-shaped:** unknown teams, duplicates, and oversized payloads are stripped before anything touches the database.
+
+In short: even if someone grabs the public key (they can), the worst they can do is see their own empty bracket.
 
 ---
 
-## 🛡️ Security Checklist
+## Running It Yourself
 
-Before sharing/deploying:
+> A word which here means *"on your own machine, where it can do no harm."*
 
-- [ ] `.env.local` exists with your Supabase credentials
-- [ ] `.env.local` is in `.gitignore` (already is ✅)
-- [ ] Run `git status` — `.env.local` should NOT appear
-- [ ] Never commit `.env.local` or hardcode secrets
-- [ ] All user input is sanitized (see `src/js/sanitize.js`)
-- [ ] Supabase RLS policies enabled (server-side security)
+**Prerequisites:** Node 18+, a Supabase project, and an SMTP provider for the auth emails.
 
----
+```bash
+# 1. install
+npm install
 
-## 🌐 Deployment (Vercel, DigitalOcean, etc)
+# 2. give it your Supabase keys
+cp .env.example .env.local
+#    then edit .env.local:
+#    VITE_SUPABASE_URL=https://your-project.supabase.co
+#    VITE_SUPABASE_ANON_KEY=your-anon-key
 
-### Option 1: Vercel (GitHub Student Pack)
-1. Push repo to GitHub (without `.env.local`)
-2. Connect to Vercel
-3. In Vercel dashboard → **Settings → Environment Variables**
-4. Add: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-5. Deploy
+# 3. run
+npm run dev      # http://localhost:3000
+npm test         # the unit tests
+npm run build    # production build into dist/
+```
 
-### Option 2: DigitalOcean (GitHub Student Pack)
-1. Create App Platform
-2. Connect your GitHub repo
-3. Add environment variables same as above
-4. Deploy
+### Wiring Up Supabase
 
-Both platforms keep secrets safe (never shown in repo).
+Run this once in the SQL editor. It creates the table, locks it down with RLS, and — crucially — grants the API role permission to use it (the missing GRANT is a rite of passage; everyone meets the "permission denied for table" error exactly once):
 
----
+```sql
+create table if not exists public.brackets (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  picks jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
 
-## 📝 Development Notes
+alter table public.brackets enable row level security;
+create policy "own_bracket_select" on public.brackets for select to authenticated using (auth.uid() = user_id);
+create policy "own_bracket_insert" on public.brackets for insert to authenticated with check (auth.uid() = user_id);
+create policy "own_bracket_update" on public.brackets for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
-### Adding new features:
+grant select, insert, update on public.brackets to authenticated;
+notify pgrst, 'reload schema';
+```
 
-1. **Receiving user input?** → Sanitize it
-   ```javascript
-   import { sanitizeInput } from './sanitize.js';
-   const userTeam = sanitizeInput(userInput);
-   ```
+Then, in the Supabase dashboard:
+1. **Authentication → Providers:** enable Email.
+2. **Authentication → Emails → SMTP Settings:** point it at your SMTP provider (verify a sending subdomain first, or the emails go nowhere interesting).
+3. **Authentication → URL Configuration:** add your local and deployed URLs as redirect targets.
+4. **Authentication → Rate Limits:** raise the emails-per-hour cap so a crowd signing in at once doesn't get throttled.
 
-2. **Need a new env var?**
-   - Add to `.env.example`
-   - Import in `src/config/supabase.js`
-   - Use `import.meta.env.VITE_*`
+### Deploying
 
-3. **Rendering dynamic content?**
-   ```javascript
-   // ❌ UNSAFE
-   element.innerHTML = userInput;
-   
-   // ✅ SAFE
-   element.textContent = sanitizeInput(userInput);
-   ```
+Push to GitHub, import the repo into Vercel, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables, and deploy. Every subsequent `git push` redeploys on its own.
 
 ---
 
-## 🤔 FAQ
+## The Roadmap (or: What Survived the Cutting-Room Floor)
 
-**Q: Why use `.env.local` instead of `.env`?**
-A: `.env.local` is ignored by git but `.env` isn't always. Using `.local` is explicit and safer.
+The launch did exactly one thing well and saved the rest for daylight:
 
-**Q: Can I share this repo with my team?**
-A: Yes! The code is safe to share. Just remind them to create their own `.env.local` with their Supabase credentials.
-
-**Q: What if my Supabase key leaks?**
-A: Rotate it immediately in Supabase dashboard. Supabase has RLS (Row Level Security) so even leaked keys have limited access.
-
-**Q: Can I use this at work?**
-A: Yes, it's designed for it! No hardcoded secrets, sanitized inputs, GDPR-compliant.
+- **Phase 1.5** — export your finished bracket as an image; autosave so an accidental refresh can't eat your picks.
+- **Phase 2** — the knockout rounds, and a quiet notification when someone submits a bracket.
+- **Phase 3** — a scoring engine and a leaderboard, so the per-round prizes have something to measure. *(This is the part I promised coworkers out loud before building it, which is the traditional order of operations.)*
 
 ---
 
-## 📚 Next Steps
+## Credits
 
-1. **Set up Supabase database** (see Supabase docs)
-2. **Build bracket UI** (in `src/js/app.js` → `loadBracket()`)
-3. **Add team management** features
-4. **Deploy to Vercel/DigitalOcean**
+- **Original bracket concept:** an unnamed stranger whose view-source I will always be grateful for.
+- **Rebuilt, secured, and rewritten by:** Kobe Amoh — in one night, fueled by a non-alcoholic grapefruit beer.
+- **Colours:** University of Alberta green + gold.
 
----
-
-## 📞 Questions?
-
-Refer to:
-- [Supabase Docs](https://supabase.com/docs)
-- [Vite Docs](https://vitejs.dev/)
-- [Environment Variables in Vite](https://vitejs.dev/guide/env-and-mode.html)
-
----
-
-**Credits:** Original bracket app from [2026bracket.vercel.app](https://2026bracket.vercel.app)  
-**Refactored for:** Security, modularity, and team use  
-**By:** Kobe Amoh
+If you're reading this because you're in the work pool: good luck, pick with your heart, and remember that the eight best third-placed teams also advance — a rule designed by FIFA specifically to ruin friendships.
