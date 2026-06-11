@@ -290,6 +290,7 @@ header p {
 .group-card .team-row {
   width: 100%;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
@@ -342,10 +343,14 @@ header p {
 }
 
 .team-row .team-name {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .advance-tag {
+  flex: 0 0 auto;
+  margin-left: auto;
+  white-space: nowrap;
   font-size: 0.65rem;
   font-weight: 800;
   text-transform: uppercase;
