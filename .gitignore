@@ -29,3 +29,7 @@ npm-debug.log*
 
 # Project notes (local only - avoids exposing file paths)
 PROJECT_STATE.md
+
+# Personal / career docs (local only)
+docs/MANAGER_GROWTH.md
+docs/PORTFOLIO_CASE_STUDY.md
