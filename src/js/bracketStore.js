@@ -40,39 +40,52 @@ export function validatePicks(picks) {
 }
 
 /**
- * Load the signed-in user's saved bracket. Returns {} when there is no row yet.
- * RLS guarantees a user can only ever read their own row.
+ * Load the signed-in user's saved bracket row: validated picks plus the row's
+ * `updated_at` (the version stamp). Returns { picks: {}, updatedAt: null } when
+ * there is no row yet. RLS guarantees a user can only ever read their own row.
  */
-export async function loadPicks(supabase, userId) {
-  if (!supabase || !userId) return {};
+export async function loadBracketRow(supabase, userId) {
+  if (!supabase || !userId) return { picks: {}, updatedAt: null };
 
   const { data, error } = await supabase
     .from('brackets')
-    .select('picks')
+    .select('picks, updated_at')
     .eq('user_id', userId)
     .maybeSingle();
 
   if (error) throw error;
-  return validatePicks(data?.picks ?? {});
+  return { picks: validatePicks(data?.picks ?? {}), updatedAt: data?.updated_at ?? null };
 }
 
 /**
- * Upsert the user's bracket. Returns the cleaned picks that were persisted.
- * RLS guarantees a user can only ever write their own row.
+ * Load just the signed-in user's saved picks (a thin wrapper over
+ * loadBracketRow). Returns {} when there is no row yet.
+ */
+export async function loadPicks(supabase, userId) {
+  const { picks } = await loadBracketRow(supabase, userId);
+  return picks;
+}
+
+/**
+ * Upsert the user's bracket. Returns the cleaned picks that were persisted plus
+ * the `updatedAt` timestamp that was written (so callers can track which DB
+ * version they are now in sync with). RLS guarantees a user can only ever write
+ * their own row.
  */
 export async function savePicks(supabase, userId, picks) {
   if (!supabase) throw new Error('Supabase client is required');
   if (!userId) throw new Error('You must be signed in to save');
 
   const clean = validatePicks(picks);
+  const updatedAt = new Date().toISOString();
 
   const { error } = await supabase
     .from('brackets')
     .upsert(
-      { user_id: userId, picks: clean, updated_at: new Date().toISOString() },
+      { user_id: userId, picks: clean, updated_at: updatedAt },
       { onConflict: 'user_id' }
     );
 
   if (error) throw error;
-  return clean;
+  return { picks: clean, updatedAt };
 }

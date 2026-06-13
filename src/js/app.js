@@ -11,7 +11,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { sanitizeEmail, redactEmail } from './sanitize.js';
 import { renderBracket, getGroupOrder, getGroupTeamNames, ADVANCE_COUNT } from './bracketData.js';
-import { loadPicks, savePicks } from './bracketStore.js';
+import { loadBracketRow, savePicks } from './bracketStore.js';
+import { saveDraft, readDraft, clearDraft, shouldRestoreDraft } from './draftStore.js';
 import { isOtpCooldownActive, formatCooldownSeconds } from './authUtils.js';
 import { config } from '../config/supabase.js';
 
@@ -23,7 +24,21 @@ let currentUser = null;
 let picks = {}; // { [groupCode]: [teamName, ...] } ordered 1st -> 4th
 let savedSnapshot = '{}'; // JSON of last persisted picks, for unsaved-change detection
 let loadedUserId = null; // guards against reloading (and clobbering unsaved picks) on tab refocus
+let loadedUpdatedAt = null; // DB row's updated_at we last synced with (a draft's base version)
 let otpLastSentAt = 0;
+
+// Draft autosave: a guarded localStorage handle (private mode can throw on the
+// very access) and a debounce timer so we persist shortly after the user stops
+// clicking rather than on every single click.
+const draftStorage = (() => {
+  try {
+    return typeof window !== 'undefined' ? window.localStorage : null;
+  } catch {
+    return null;
+  }
+})();
+const DRAFT_DEBOUNCE_MS = 500;
+let draftTimer = null;
 
 // ============================================
 // UI Helpers
@@ -92,6 +107,30 @@ function hasUnsavedChanges() {
   return JSON.stringify(picks) !== savedSnapshot;
 }
 
+// Persist the in-progress bracket to localStorage so a refresh can't lose it.
+// Debounced on each click; drafts may be incomplete (the gated DB Save is the
+// real submission). When the picks match the DB again we drop the draft instead.
+function scheduleDraftSave() {
+  if (draftTimer) clearTimeout(draftTimer);
+  draftTimer = setTimeout(flushDraft, DRAFT_DEBOUNCE_MS);
+}
+
+function flushDraft() {
+  if (draftTimer) {
+    clearTimeout(draftTimer);
+    draftTimer = null;
+  }
+  if (!currentUser) return;
+
+  if (hasUnsavedChanges()) {
+    const ok = saveDraft(draftStorage, currentUser.id, picks, loadedUpdatedAt);
+    setSaveStatus(ok ? 'Draft saved · not submitted' : 'Unsaved changes');
+  } else {
+    clearDraft(draftStorage, currentUser.id);
+    setSaveStatus('');
+  }
+}
+
 function onBracketClick(e) {
   const btn = e.target.closest('button[data-group]');
   if (!btn) return;
@@ -102,7 +141,8 @@ function onBracketClick(e) {
 
   togglePick(group, teamName);
   renderBracketUI();
-  setSaveStatus(hasUnsavedChanges() ? 'Unsaved changes' : '');
+  setSaveStatus(hasUnsavedChanges() ? 'Saving draft…' : '');
+  scheduleDraftSave();
 }
 
 async function handleSave() {
@@ -118,14 +158,22 @@ async function handleSave() {
     showAlert(`❌ Pick ${ADVANCE_COUNT} teams in every group before saving — still need: ${list}${more}`, 'error');
     return;
   }
+  // A draft write may be queued; cancel it so it can't overwrite the save status.
+  if (draftTimer) {
+    clearTimeout(draftTimer);
+    draftTimer = null;
+  }
   if (saveBtn) {
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving…';
   }
   setSaveStatus('Saving…');
   try {
-    picks = await savePicks(supabase, currentUser.id, picks);
+    const saved = await savePicks(supabase, currentUser.id, picks);
+    picks = saved.picks;
     savedSnapshot = JSON.stringify(picks);
+    loadedUpdatedAt = saved.updatedAt;
+    clearDraft(draftStorage, currentUser.id); // DB is now the source of truth
     renderBracketUI();
     setSaveStatus('Saved ✓');
     showAlert('✅ Bracket saved', 'success');
@@ -192,10 +240,16 @@ async function handleLogin(e) {
 async function handleLogout() {
   try {
     await supabase.auth.signOut();
+    if (draftTimer) {
+      clearTimeout(draftTimer);
+      draftTimer = null;
+    }
+    if (currentUser) clearDraft(draftStorage, currentUser.id);
     currentUser = null;
     picks = {};
     savedSnapshot = '{}';
     loadedUserId = null;
+    loadedUpdatedAt = null;
     showAuthSection();
     showAlert('✅ Signed out', 'success');
   } catch (err) {
@@ -238,11 +292,25 @@ async function loadBracket() {
   renderBracketUI(); // show the interactive bracket immediately
 
   try {
-    picks = await loadPicks(supabase, currentUser.id);
+    const { picks: dbPicks, updatedAt } = await loadBracketRow(supabase, currentUser.id);
+    picks = dbPicks;
     savedSnapshot = JSON.stringify(picks);
+    loadedUpdatedAt = updatedAt;
     loadedUserId = currentUser.id;
-    renderBracketUI();
-    setSaveStatus(Object.keys(picks).length ? 'Loaded your saved bracket' : '');
+
+    // Restore a local draft only if it was based on the DB version we just
+    // loaded (the bracket wasn't saved from another device since). The DB
+    // snapshot stays the baseline, so a restored draft reads as "not submitted".
+    const draft = readDraft(draftStorage, currentUser.id);
+    if (shouldRestoreDraft(draft, updatedAt) && JSON.stringify(draft.picks) !== savedSnapshot) {
+      picks = draft.picks;
+      renderBracketUI();
+      setSaveStatus('Draft restored · not submitted');
+    } else {
+      if (draft) clearDraft(draftStorage, currentUser.id); // stale: DB changed elsewhere
+      renderBracketUI();
+      setSaveStatus(Object.keys(picks).length ? 'Loaded your saved bracket' : '');
+    }
   } catch (err) {
     console.error('Load bracket error:', err);
     showAlert('❌ Failed to load your saved bracket', 'error');
@@ -257,6 +325,15 @@ document.getElementById('loginForm').addEventListener('submit', handleLogin);
 document.getElementById('logoutBtn').addEventListener('click', handleLogout);
 if (saveBtn) saveBtn.addEventListener('click', handleSave);
 if (bracketEl) bracketEl.addEventListener('click', onBracketClick);
+
+// Flush a pending draft synchronously before the page is hidden or unloaded, so
+// a refresh inside the debounce window still persists the latest picks.
+window.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && draftTimer) flushDraft();
+});
+window.addEventListener('pagehide', () => {
+  if (draftTimer) flushDraft();
+});
 
 // Check authentication on page load
 document.addEventListener('DOMContentLoaded', checkAuth);
