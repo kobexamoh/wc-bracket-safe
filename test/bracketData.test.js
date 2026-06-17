@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getTournamentGroups, getGroupOrder, getGroupTeamNames, renderBracket } from '../src/js/bracketData.js';
+import { getTournamentGroups, getGroupOrder, getGroupTeamNames, renderBracket, randomPicks, ADVANCE_COUNT } from '../src/js/bracketData.js';
 
 test('tournament groups include all 12 groups and four teams each', () => {
   const groups = getTournamentGroups();
@@ -42,4 +42,29 @@ test('bracket marks the top two ranked teams as advancing with rank badges', () 
   assert.match(html, /is-advancing/);
   assert.match(html, /rank-badge">1</);
   assert.match(html, /rank-badge">2</);
+});
+
+test('randomPicks fills every group with exactly the advancing pair', () => {
+  const picks = randomPicks();
+  const codes = getGroupOrder();
+
+  assert.equal(Object.keys(picks).length, codes.length);
+  assert.equal(codes.every((code) => picks[code].length === ADVANCE_COUNT), true);
+});
+
+test('randomPicks only uses real teams from each group, with no duplicates', () => {
+  const picks = randomPicks();
+
+  for (const code of getGroupOrder()) {
+    const valid = getGroupTeamNames(code);
+    const chosen = picks[code];
+    assert.equal(new Set(chosen).size, chosen.length); // no duplicates
+    assert.equal(chosen.every((name) => valid.includes(name)), true);
+  }
+});
+
+test('randomPicks is deterministic with an injected RNG', () => {
+  // Fisher-Yates with rng()=0 rotates the first two teams to the front.
+  const picks = randomPicks(() => 0);
+  assert.deepEqual(picks.A, ['South Africa', 'South Korea']);
 });

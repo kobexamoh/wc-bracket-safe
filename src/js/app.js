@@ -10,7 +10,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { sanitizeEmail, redactEmail } from './sanitize.js';
-import { renderBracket, getGroupOrder, getGroupTeamNames, ADVANCE_COUNT } from './bracketData.js';
+import { renderBracket, getGroupOrder, getGroupTeamNames, randomPicks, ADVANCE_COUNT } from './bracketData.js';
 import { loadBracketRow, savePicks } from './bracketStore.js';
 import { saveDraft, readDraft, clearDraft, shouldRestoreDraft } from './draftStore.js';
 import { isOtpCooldownActive, formatCooldownSeconds } from './authUtils.js';
@@ -68,6 +68,8 @@ function showBracketSection() {
 
 const bracketEl = document.getElementById('bracket');
 const saveBtn = document.getElementById('saveBtn');
+const deselectBtn = document.getElementById('deselectBtn');
+const randomBtn = document.getElementById('randomBtn');
 const saveStatusEl = document.getElementById('saveStatus');
 const progressTextEl = document.getElementById('progressText');
 const progressBarEl = document.getElementById('progressBar');
@@ -131,6 +133,13 @@ function flushDraft() {
   }
 }
 
+// Shared post-change routine: re-render, reflect draft status, and autosave.
+function afterPicksChanged() {
+  renderBracketUI();
+  setSaveStatus(hasUnsavedChanges() ? 'Saving draft…' : '');
+  scheduleDraftSave();
+}
+
 function onBracketClick(e) {
   const btn = e.target.closest('button[data-group]');
   if (!btn) return;
@@ -140,9 +149,22 @@ function onBracketClick(e) {
   if (!teamName) return;
 
   togglePick(group, teamName);
-  renderBracketUI();
-  setSaveStatus(hasUnsavedChanges() ? 'Saving draft…' : '');
-  scheduleDraftSave();
+  afterPicksChanged();
+}
+
+// Clear every pick at once (with a quick confirm), then autosave the empty draft.
+function handleDeselectAll() {
+  if (!Object.keys(picks).length) return;
+  if (!window.confirm('Clear all your picks?')) return;
+  picks = {};
+  afterPicksChanged();
+}
+
+// Fill a random but valid bracket (2 advancing per group); user can tweak or save.
+function handleSelectForMe() {
+  picks = randomPicks();
+  afterPicksChanged();
+  showAlert('🎲 Picked a random bracket for you — tweak it or save', 'info');
 }
 
 async function handleSave() {
@@ -288,30 +310,41 @@ async function loadBracket() {
   // Supabase fires auth events (e.g. token refresh) when the tab regains focus.
   // Load from the DB only once per user so we never clobber unsaved picks.
   if (loadedUserId === currentUser.id) return;
+  // Claim the load synchronously — before the first await — so two near-
+  // simultaneous triggers (initial DOMContentLoaded + a SIGNED_IN/token-refresh
+  // auth event) can't both run and double up the toast / DB request.
+  const userId = currentUser.id;
+  loadedUserId = userId;
 
   renderBracketUI(); // show the interactive bracket immediately
 
   try {
-    const { picks: dbPicks, updatedAt } = await loadBracketRow(supabase, currentUser.id);
+    const { picks: dbPicks, updatedAt } = await loadBracketRow(supabase, userId);
     picks = dbPicks;
     savedSnapshot = JSON.stringify(picks);
     loadedUpdatedAt = updatedAt;
-    loadedUserId = currentUser.id;
 
     // Restore a local draft only if it was based on the DB version we just
     // loaded (the bracket wasn't saved from another device since). The DB
     // snapshot stays the baseline, so a restored draft reads as "not submitted".
-    const draft = readDraft(draftStorage, currentUser.id);
+    const draft = readDraft(draftStorage, userId);
     if (shouldRestoreDraft(draft, updatedAt) && JSON.stringify(draft.picks) !== savedSnapshot) {
       picks = draft.picks;
       renderBracketUI();
       setSaveStatus('Draft restored · not submitted');
+      showAlert('↩️ Restored your unsaved draft (not submitted yet)', 'info');
     } else {
-      if (draft) clearDraft(draftStorage, currentUser.id); // stale: DB changed elsewhere
+      if (draft) clearDraft(draftStorage, userId); // stale: DB changed elsewhere
       renderBracketUI();
-      setSaveStatus(Object.keys(picks).length ? 'Loaded your saved bracket' : '');
+      if (Object.keys(picks).length) {
+        setSaveStatus('Loaded your saved bracket');
+        showAlert('👋 Welcome back — we loaded your saved bracket', 'success');
+      } else {
+        setSaveStatus('');
+      }
     }
   } catch (err) {
+    loadedUserId = null; // load failed — allow a retry on the next auth event
     console.error('Load bracket error:', err);
     showAlert('❌ Failed to load your saved bracket', 'error');
   }
@@ -324,6 +357,8 @@ async function loadBracket() {
 document.getElementById('loginForm').addEventListener('submit', handleLogin);
 document.getElementById('logoutBtn').addEventListener('click', handleLogout);
 if (saveBtn) saveBtn.addEventListener('click', handleSave);
+if (deselectBtn) deselectBtn.addEventListener('click', handleDeselectAll);
+if (randomBtn) randomBtn.addEventListener('click', handleSelectForMe);
 if (bracketEl) bracketEl.addEventListener('click', onBracketClick);
 
 // Flush a pending draft synchronously before the page is hidden or unloaded, so

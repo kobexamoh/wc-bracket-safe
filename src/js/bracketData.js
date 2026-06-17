@@ -39,6 +39,24 @@ export const ADVANCE_COUNT = 2;
 export const MAX_RANK = 4;
 
 /**
+ * Build a random but valid bracket: the top 2 (1st & 2nd) advancing teams for
+ * every group, in the same shape the app/store use. A RNG can be injected for
+ * deterministic tests; defaults to Math.random.
+ */
+export function randomPicks(rng = Math.random) {
+  const picks = {};
+  for (const code of getGroupOrder()) {
+    const teams = getGroupTeamNames(code); // fresh array copy, safe to shuffle
+    for (let i = teams.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [teams[i], teams[j]] = [teams[j], teams[i]];
+    }
+    picks[code] = teams.slice(0, ADVANCE_COUNT);
+  }
+  return picks;
+}
+
+/**
  * Render the interactive group stage.
  * `picks` is { [groupCode]: [teamName, ...] } in predicted finishing order
  * (index 0 = 1st). Each team is a button so it is clickable + keyboard friendly;
