@@ -74,6 +74,20 @@ header p {
   cursor: not-allowed;
 }
 
+/* Secondary/ghost buttons (Sign Out, Deselect all, Select for me) */
+.btn-ghost {
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  border-color: var(--border);
+  color: var(--navy);
+}
+
+.btn-ghost:hover {
+  background: var(--light-gray);
+  color: var(--navy);
+  box-shadow: none;
+}
+
 /* Loading spinner */
 @keyframes spin {
   to { transform: rotate(360deg); }
@@ -117,7 +131,7 @@ header p {
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 14px;
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
 .group-card h3 {
@@ -193,6 +207,44 @@ header p {
   font-size: 0.9rem;
 }
 
+/* Top bar: user info (left) + actions (feedback, sign out) on the right */
+.bracket-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.bracket-topbar .user-info {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+/* Floating feedback / bug button, pinned bottom-right (quiet but findable) */
+.feedback-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 200;
+  background: white;
+  color: var(--navy);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
+}
+
+.feedback-fab:hover {
+  background: var(--navy);
+  color: var(--gold);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.22);
+}
+
 .bracket-toolbar {
   position: sticky;
   top: 84px;
@@ -240,7 +292,9 @@ header p {
 
 .bracket-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 12px;
 }
 
@@ -283,7 +337,7 @@ header p {
 
 .group-card.is-complete {
   border-color: var(--gold);
-  box-shadow: 0 10px 25px rgba(235, 197, 116, 0.35);
+  box-shadow: 0 1px 3px rgba(34, 37, 82, 0.08);
 }
 
 .group-card ul {
