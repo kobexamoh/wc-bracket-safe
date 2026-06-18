@@ -245,6 +245,40 @@ header p {
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.22);
 }
 
+/* Off-screen branded card used only to render the downloadable PNG */
+.bracket-export {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 1024px;
+  background: white;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.bracket-export__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--ua-green);
+  color: white;
+  padding: 14px 18px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.bracket-export__head h2 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.bracket-export__head span {
+  color: var(--ua-gold);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
 .bracket-toolbar {
   position: sticky;
   top: 84px;

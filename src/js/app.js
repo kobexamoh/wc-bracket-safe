@@ -12,6 +12,7 @@ import { createClient } from '@supabase/supabase-js';
 import { sanitizeEmail, redactEmail } from './sanitize.js';
 import { renderBracket, getGroupOrder, getGroupTeamNames, randomPicks, ADVANCE_COUNT } from './bracketData.js';
 import { loadBracketRow, savePicks } from './bracketStore.js';
+import { downloadBracketImage } from './exportImage.js';
 import { saveDraft, readDraft, clearDraft, shouldRestoreDraft } from './draftStore.js';
 import { isOtpCooldownActive, formatCooldownSeconds } from './authUtils.js';
 import { config } from '../config/supabase.js';
@@ -70,6 +71,7 @@ const bracketEl = document.getElementById('bracket');
 const saveBtn = document.getElementById('saveBtn');
 const deselectBtn = document.getElementById('deselectBtn');
 const randomBtn = document.getElementById('randomBtn');
+const exportBtn = document.getElementById('exportBtn');
 const saveStatusEl = document.getElementById('saveStatus');
 const progressTextEl = document.getElementById('progressText');
 const progressBarEl = document.getElementById('progressBar');
@@ -165,6 +167,30 @@ function handleSelectForMe() {
   picks = randomPicks();
   afterPicksChanged();
   showAlert('🎲 Picked a random bracket for you — tweak it or save', 'info');
+}
+
+// Download the current bracket as a branded PNG (html2canvas is lazy-loaded).
+async function handleExport() {
+  if (!Object.keys(picks).length) {
+    showAlert('Pick at least one team before downloading an image', 'info');
+    return;
+  }
+  if (exportBtn) {
+    exportBtn.disabled = true;
+    exportBtn.textContent = 'Generating…';
+  }
+  try {
+    await downloadBracketImage(picks);
+    showAlert('🖼️ Image downloaded', 'success');
+  } catch (err) {
+    console.error('Export error:', err);
+    showAlert(`❌ Could not export image: ${err.message}`, 'error');
+  } finally {
+    if (exportBtn) {
+      exportBtn.disabled = false;
+      exportBtn.textContent = 'Screenshot bracket (PNG)';
+    }
+  }
 }
 
 async function handleSave() {
@@ -359,6 +385,7 @@ document.getElementById('logoutBtn').addEventListener('click', handleLogout);
 if (saveBtn) saveBtn.addEventListener('click', handleSave);
 if (deselectBtn) deselectBtn.addEventListener('click', handleDeselectAll);
 if (randomBtn) randomBtn.addEventListener('click', handleSelectForMe);
+if (exportBtn) exportBtn.addEventListener('click', handleExport);
 if (bracketEl) bracketEl.addEventListener('click', onBracketClick);
 
 // Flush a pending draft synchronously before the page is hidden or unloaded, so
