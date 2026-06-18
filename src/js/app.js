@@ -278,7 +278,7 @@ async function handleLogin(e) {
     if (error) throw error;
 
     otpLastSentAt = Date.now();
-    showAlert('✅ Check your email for the login link', 'success');
+    showAlert('✅ Check your email for the login link (open it in this same browser)', 'success');
     document.getElementById('emailInput').value = '';
   } catch (err) {
     console.error('Login error:', err);
