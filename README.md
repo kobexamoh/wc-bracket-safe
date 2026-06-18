@@ -14,8 +14,10 @@ A single-page app for a friendly office World Cup pool:
 - **Rank each group by clicking.** First click crowns 1st, the next 2nd, and so on through 4th. Click a team again to dethrone it; the rest politely shuffle up. The top two in every group are marked **Advances**.
 - **Save your bracket.** It lands in a database row that is yours and yours alone — enforced by the server, not by good manners.
 - **Come back later.** Your picks are waiting, exactly where you left them.
+- **Autosave has your back.** Drafts are kept in your browser as you click, so an accidental refresh can't eat your picks — only a deliberate **Save** submits the finished bracket.
+- **A few conveniences:** download your bracket as an image for the group chat, fill a random one with **Select for me**, wipe the slate with **Deselect all**, and flag anything broken via a quiet **Report a bug** button.
 
-That's the whole job. It does that job and then stops, which is more than can be said for most software.
+That's the whole job — plus a few quality-of-life touches that arrived after kickoff (Chapter IV). It does that job and then stops, which is more than can be said for most software.
 
 ---
 
@@ -35,6 +37,17 @@ So it was rebuilt — properly this time — in the small hours before the tourn
 
 It shipped. The opener was at 1pm. We made it with hours to spare, which in software terms is roughly a decade.
 
+## IV. In Which It Learns New Tricks After Kickoff
+
+The launch was the start, not the end. In the calmer days that followed:
+
+- **Autosave arrived**, because the very first thing real people do is refresh at the worst possible moment. Drafts now persist to the browser as you click and reconcile against the database when you return — and a "draft restored" message that briefly appeared *twice* was hunted down to a small race condition and fixed.
+- **I tested my own app like a stranger would**, narrated the confusion out loud, and turned it into a punch-list: sign-out moved somewhere sensible, status messages climbed to the top of the screen, a **Select for me** button appeared for the indecisive, and the vibe-coded background glow was politely shown the door.
+- **A finished bracket can be exported as an image** — rendered off-screen so the picture is clean, with the heavy rendering library loaded only when you actually ask for it.
+- And, in a personal first, all of this shipped through a **feature branch and a real pull request** instead of committing straight to `main` like a daredevil.
+
+None of it was strictly necessary. All of it made the thing feel a little more alive.
+
 ---
 
 ## The Stack
@@ -43,6 +56,7 @@ It shipped. The opener was at 1pm. We made it with hours to spare, which in soft
 - **Auth + database:** [Supabase](https://supabase.com/) — email magic-link sign-in and a single Postgres table guarded by Row-Level Security.
 - **Auth emails:** a custom SMTP provider ([Resend](https://resend.com/)) on a subdomain you control, because Supabase's built-in mailer is rate-limited and will tap out the moment a dozen coworkers log in at once.
 - **Hosting:** [Vercel](https://vercel.com/), redeploying on every push.
+- **Image export:** [html2canvas](https://html2canvas.hertzen.com/), loaded on demand so it never weighs down the first page load.
 - **Tests:** Node's built-in test runner. No dependencies, no ceremony.
 
 ```
@@ -53,8 +67,10 @@ wc-bracket-safe/
 │   ├── js/
 │   │   ├── app.js          # auth flow + interactive bracket wiring
 │   │   ├── authUtils.js    # the "stop spamming the login button" cooldown
-│   │   ├── bracketData.js  # the 48 teams, 12 groups, and the renderer
+│   │   ├── bracketData.js  # the 48 teams, 12 groups, the renderer + randomizer
 │   │   ├── bracketStore.js # load / save / validate picks
+│   │   ├── draftStore.js   # local autosave drafts + restore logic
+│   │   ├── exportImage.js  # off-screen branded card → downloadable PNG
 │   │   └── sanitize.js     # input scrubbing + email redaction
 │   └── styles/styles.css   # U of A green + gold
 └── test/                   # unit tests for the bits worth trusting
@@ -133,7 +149,8 @@ Push to GitHub, import the repo into Vercel, add `VITE_SUPABASE_URL` and `VITE_S
 
 The launch did exactly one thing well and saved the rest for daylight:
 
-- **Phase 1.5** — export your finished bracket as an image; autosave so an accidental refresh can't eat your picks.
+- **Phase 1.5 — ✅ shipped.** Autosave drafts and image export both landed (see Chapter IV), alongside a round of UX fixes from testing it on myself.
+- **Phase ~1.75** — the boring-but-important pre-share checks: confirm the magic link survives a real coworker's inbox, and fall back to a 6-digit code if corporate mail gets fussy.
 - **Phase 2** — the knockout rounds, and a quiet notification when someone submits a bracket.
 - **Phase 3** — a scoring engine and a leaderboard, so the per-round prizes have something to measure. *(This is the part I promised coworkers out loud before building it, which is the traditional order of operations.)*
 
