@@ -267,6 +267,12 @@ async function handleLogin(e) {
   try {
     const { error } = await supabase.auth.signInWithOtp({
       email: sanitized,
+      options: {
+        // Return to the origin the request came from so a login requested
+        // from localhost / a Vercel preview / prod each lands back on
+        // itself, instead of falling back to Supabase's Site URL.
+        emailRedirectTo: window.location.origin,
+      },
     });
 
     if (error) throw error;
