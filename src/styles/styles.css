@@ -195,6 +195,22 @@ header p {
   border: 1px solid #42a5f5;
 }
 
+/* Sign-in hint: magic links are per-browser (PKCE), so opening one in a
+   different browser or a private window can't complete the code exchange. */
+.auth-hint {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #fffaf0;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.auth-hint strong {
+  color: var(--navy);
+}
+
 /* ============================================
    Interactive ranking UI
    ============================================ */
