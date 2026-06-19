@@ -238,6 +238,31 @@ header p {
   flex: 1;
 }
 
+/* "Your name" field in the top bar (used to personalize the screenshot export) */
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.name-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.name-field input {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.85rem;
+  max-width: 160px;
+}
+
 /* Floating feedback / bug button, pinned bottom-right (quiet but findable) */
 .feedback-fab {
   position: fixed;
