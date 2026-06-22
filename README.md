@@ -17,7 +17,7 @@ A single-page app for a friendly office World Cup pool:
 - **Autosave has your back.** Drafts are kept in your browser as you click, so an accidental refresh can't eat your picks — only a deliberate **Save** submits the finished bracket.
 - **A few conveniences:** download your bracket as an image for the group chat, fill a random one with **Select for me**, wipe the slate with **Deselect all**, and flag anything broken via a quiet **Report a bug** button.
 
-That's the whole job — plus a few quality-of-life touches that arrived after kickoff (Chapter IV). It does that job and then stops, which is more than can be said for most software.
+That's the whole job — plus a few quality-of-life touches that arrived after kickoff (Chapters IV and V). It does that job and then stops, which is more than can be said for most software.
 
 ---
 
@@ -47,6 +47,13 @@ The launch was the start, not the end. In the calmer days that followed:
 - And, in a personal first, all of this shipped through a **feature branch and a real pull request** instead of committing straight to `main` like a daredevil.
 
 None of it was strictly necessary. All of it made the thing feel a little more alive.
+
+## V. In Which It Gets a Name, a Typeface, and Fewer Tells
+The calm days kept going:
+- **The magic link learned its way home.** It now returns you to wherever you asked from — localhost, a preview, or production — instead of always guessing the same place. A quiet, persistent note nudges people to open the link in the same browser they requested it from, which heads off the most common sign-in stumble.
+- **The screenshot got personal.** An optional name turns the exported card into "Your Name's D+C World Cup Bracket" and prefixes the saved file, so a pile of submissions is easy to tell apart.
+- **A typeface with intent.** The default system font gave way to Source Sans 3 — chosen on purpose, not by reflex — and the group-stage copy now explains that you really should rank all four, because the eight best third-placed teams advance too.
+- **A run through a deterministic "AI-tells" detector** caught a few honest things: gold-on-green text that failed contrast, lines that ran too wide to read, and a progress bar animating the expensive way. All fixed. (It also, briefly, audited the Vercel login page instead of the app — previews are behind a gate.)
 
 ---
 
@@ -150,7 +157,7 @@ Push to GitHub, import the repo into Vercel, add `VITE_SUPABASE_URL` and `VITE_S
 The launch did exactly one thing well and saved the rest for daylight:
 
 - **Phase 1.5 — ✅ shipped.** Autosave drafts and image export both landed (see Chapter IV), alongside a round of UX fixes from testing it on myself.
-- **Phase ~1.75** — the boring-but-important pre-share checks: confirm the magic link survives a real coworker's inbox, and fall back to a 6-digit code if corporate mail gets fussy.
+- **Phase ~1.75** — mostly handled now — branded sign-in emails, deliverability sorted (a verified custom SMTP subdomain), the redirect taught to come home, and a same-browser hint shipped. The fallback to a 6-digit code, should corporate mail ever get fussy, is still on the shelf.
 - **Phase 2** — the knockout rounds, and a quiet notification when someone submits a bracket.
 - **Phase 3** — a scoring engine and a leaderboard, so the per-round prizes have something to measure. *(This is the part I promised coworkers out loud before building it, which is the traditional order of operations.)*
 

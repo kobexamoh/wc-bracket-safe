@@ -42,7 +42,7 @@ header h1 {
 }
 
 header p {
-  color: var(--ua-gold);
+  color: #ffffff;
   font-size: 0.9rem;
 }
 
@@ -120,6 +120,7 @@ header p {
 .panel-header p {
   color: #4b5563;
   font-size: 0.95rem;
+  max-width: 70ch;
 }
 
 .how-it-works {
@@ -130,6 +131,7 @@ header p {
   border-radius: 8px;
   font-size: 0.9rem;
   color: #4b5563;
+  max-width: 70ch;
 }
 
 .groups-grid {
@@ -217,6 +219,7 @@ header p {
   border-radius: 8px;
   font-size: 0.85rem;
   color: #4b5563;
+  max-width: 70ch;
 }
 
 .auth-hint strong {
@@ -372,9 +375,11 @@ header p {
 
 .progress-fill {
   height: 100%;
-  width: 0;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left;
   background: var(--gold);
-  transition: width 0.25s ease;
+  transition: transform 0.25s ease;
 }
 
 .bracket-actions {

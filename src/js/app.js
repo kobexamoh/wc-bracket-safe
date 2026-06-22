@@ -111,7 +111,7 @@ function updateProgress() {
   const groups = getGroupOrder();
   const done = groups.filter((code) => (picks[code]?.length || 0) >= ADVANCE_COUNT).length;
   if (progressTextEl) progressTextEl.textContent = `${done} / ${groups.length} groups set`;
-  if (progressBarEl) progressBarEl.style.width = `${(done / groups.length) * 100}%`;
+  if (progressBarEl) progressBarEl.style.transform = `scaleX(${done / groups.length})`;
 }
 
 function renderBracketUI() {
