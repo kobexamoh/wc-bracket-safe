@@ -24,6 +24,27 @@ export function screenshotFilename(date = new Date()) {
   return `wc-bracket-${year}-${month}-${day}.png`;
 }
 
+/** Slug for filenames: lowercase, keep [a-z0-9], collapse the rest to single dashes, trim. */
+function nameSlug(name = '') {
+  return String(name)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/** Card title, e.g. "Kobe's D+C World Cup Bracket" (neutral fallback when blank). */
+export function personalizedTitle(name = '') {
+  const trimmed = String(name).trim();
+  return trimmed ? `${trimmed}'s D+C World Cup Bracket` : 'My D+C World Cup Bracket';
+}
+
+/** Filename, name-prefixed when given, e.g. `amoh-wc-bracket-2026-06-17.png`. */
+export function personalizedFilename(name = '', date = new Date()) {
+  const base = screenshotFilename(date);
+  const slug = nameSlug(name);
+  return slug ? `${slug}-${base}` : base;
+}
+
 // Lazy-load html2canvas only when an export actually happens, so it stays out
 // of the initial bundle (Vite code-splits it into its own chunk).
 async function defaultLoadHtml2canvas() {
@@ -31,17 +52,25 @@ async function defaultLoadHtml2canvas() {
   return mod.default || mod;
 }
 
-function buildExportNode(doc, picks, width) {
+function buildExportNode(doc, picks, width, title) {
   const node = doc.createElement('div');
   node.className = 'bracket-export';
   node.style.width = `${width}px`;
-  node.innerHTML = `
-    <div class="bracket-export__head">
-      <h2>2026 World Cup Bracket</h2>
-      <span>wc.kobexamoh.me</span>
-    </div>
-    ${renderBracket(picks)}
-  `;
+
+  // Build the header with DOM APIs and set the (user-derived) title via
+  // textContent, so a name can never inject markup into the export.
+  const head = doc.createElement('div');
+  head.className = 'bracket-export__head';
+  const heading = doc.createElement('h2');
+  heading.textContent = title;
+  const brand = doc.createElement('span');
+  brand.textContent = 'wc.kobexamoh.me';
+  head.appendChild(heading);
+  head.appendChild(brand);
+  node.appendChild(head);
+
+  // renderBracket() returns trusted markup built from the known team list.
+  node.insertAdjacentHTML('beforeend', renderBracket(picks));
   return node;
 }
 
@@ -53,11 +82,13 @@ export async function downloadBracketImage(picks, options = {}) {
   const {
     loadHtml2canvas = defaultLoadHtml2canvas,
     doc = document,
-    filename = screenshotFilename(),
+    name = '',
+    title = personalizedTitle(name),
+    filename = personalizedFilename(name),
     width = EXPORT_WIDTH,
   } = options;
 
-  const node = buildExportNode(doc, picks, width);
+  const node = buildExportNode(doc, picks, width, title);
   doc.body.appendChild(node);
 
   try {

@@ -41,6 +41,32 @@ const draftStorage = (() => {
 const DRAFT_DEBOUNCE_MS = 500;
 let draftTimer = null;
 
+// The screenshot "Your name" field is persisted per user in localStorage
+// (reusing the guarded draftStorage handle) and defaults to the email's local part.
+function nameStorageKey(userId) {
+  return `wc-bracket:name:${userId}`;
+}
+function loadStoredName(userId) {
+  if (!draftStorage || !userId) return '';
+  try {
+    return draftStorage.getItem(nameStorageKey(userId)) || '';
+  } catch {
+    return '';
+  }
+}
+function persistName(userId, name) {
+  if (!draftStorage || !userId) return;
+  try {
+    if (name) draftStorage.setItem(nameStorageKey(userId), name);
+    else draftStorage.removeItem(nameStorageKey(userId));
+  } catch {
+    /* private mode / quota - ignore */
+  }
+}
+function emailLocalPart(email) {
+  return String(email || '').split('@')[0] || '';
+}
+
 // ============================================
 // UI Helpers
 // ============================================
@@ -72,6 +98,7 @@ const saveBtn = document.getElementById('saveBtn');
 const deselectBtn = document.getElementById('deselectBtn');
 const randomBtn = document.getElementById('randomBtn');
 const exportBtn = document.getElementById('exportBtn');
+const nameInput = document.getElementById('displayNameInput');
 const saveStatusEl = document.getElementById('saveStatus');
 const progressTextEl = document.getElementById('progressText');
 const progressBarEl = document.getElementById('progressBar');
@@ -180,7 +207,8 @@ async function handleExport() {
     exportBtn.textContent = 'Generating…';
   }
   try {
-    await downloadBracketImage(picks);
+    const name = nameInput ? nameInput.value : '';
+    await downloadBracketImage(picks, { name });
     showAlert('🖼️ Image downloaded', 'success');
   } catch (err) {
     console.error('Export error:', err);
@@ -302,6 +330,7 @@ async function handleLogout() {
     currentUser = null;
     picks = {};
     savedSnapshot = '{}';
+    if (nameInput) nameInput.value = '';
     loadedUserId = null;
     loadedUpdatedAt = null;
     showAuthSection();
@@ -320,6 +349,9 @@ async function checkAuth() {
       currentUser = session.user;
       loadBracket();
       showBracketSection();
+      if (nameInput) {
+        nameInput.value = loadStoredName(currentUser.id) || emailLocalPart(currentUser.email);
+      }
       
       // Display user info (redacted email for privacy)
       const userInfoDiv = document.getElementById('userInfo');
@@ -392,6 +424,9 @@ if (saveBtn) saveBtn.addEventListener('click', handleSave);
 if (deselectBtn) deselectBtn.addEventListener('click', handleDeselectAll);
 if (randomBtn) randomBtn.addEventListener('click', handleSelectForMe);
 if (exportBtn) exportBtn.addEventListener('click', handleExport);
+if (nameInput) nameInput.addEventListener('input', () => {
+  if (currentUser) persistName(currentUser.id, nameInput.value.trim());
+});
 if (bracketEl) bracketEl.addEventListener('click', onBracketClick);
 
 // Flush a pending draft synchronously before the page is hidden or unloaded, so

@@ -43,7 +43,13 @@
         <div id="bracketSection" style="display: none;">
             <div class="bracket-topbar">
                 <div id="userInfo" class="user-info"></div>
-                <button id="logoutBtn" type="button" class="btn btn-ghost">Sign Out</button>
+                <div class="topbar-actions">
+                    <label class="name-field">
+                        <span class="name-field__label">Your name</span>
+                        <input id="displayNameInput" type="text" maxlength="40" autocomplete="name" placeholder="for your screenshot">
+                    </label>
+                    <button id="logoutBtn" type="button" class="btn btn-ghost">Sign Out</button>
+                </div>
             </div>
 
             <div class="bracket-toolbar">
