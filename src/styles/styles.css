@@ -10,6 +10,15 @@
   --ua-gold: #F2CD00;
   /* Type: a clean sans with character (deliberately not Inter); swap here to restyle everything */
   --font-sans: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Type scale: 1.25 modular ratio (16px base). Every adjacent step is >=1.25x
+     apart, so the hierarchy reads clearly (no more near-identical sizes). */
+  --fs-2xs: 0.625rem;   /* 10px   - micro pills (advance tag) */
+  --fs-xs: 0.8rem;      /* 12.8px - labels, badges, buttons, secondary UI */
+  --fs-base: 1rem;      /* 16px   - body, inputs, team names, primary copy */
+  --fs-lg: 1.25rem;     /* 20px   - section heading */
+  --fs-xl: 1.5625rem;   /* 25px   - page title + export title */
+  /* Sticky offset (~header height) so the toolbar + side rail pin just below it */
+  --sticky-top: 84px;
 }
 
 * {
@@ -20,6 +29,7 @@
 
 body {
   font-family: var(--font-sans);
+  font-size: var(--fs-base);
   background-color: var(--light-gray);
   color: var(--text);
   line-height: 1.6;
@@ -29,28 +39,64 @@ body {
 header {
   background-color: var(--ua-green);
   color: white;
-  padding: 20px;
-  text-align: center;
+  padding: 16px 20px;
   position: sticky;
   top: 0;
   z-index: 100;
 }
 
+/* App header: title on the left, account actions (Sign Out) pinned top-right */
+.header-inner {
+  max-width: 1500px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.header-title {
+  min-width: 0;
+}
+
 header h1 {
-  font-size: 1.5rem;
-  margin-bottom: 5px;
+  font-size: var(--fs-xl);
+  margin-bottom: 2px;
 }
 
 header p {
   color: #ffffff;
-  font-size: 0.9rem;
+  font-size: var(--fs-xs);
+}
+
+.header-actions {
+  flex: 0 0 auto;
+}
+
+/* Sign Out lives on the green header, so invert the ghost button for contrast */
+.header-actions .btn-ghost {
+  background: transparent;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.65);
+}
+
+.header-actions .btn-ghost:hover {
+  background: #ffffff;
+  color: var(--ua-green);
+  box-shadow: none;
 }
 
 /* Utilities */
 .container {
-  max-width: 1200px;
+  max-width: 1500px;
   margin: 0 auto;
   padding: 20px;
+}
+
+/* Keep the sign-in screen comfortably narrow even though the bracket view is wide */
+#authSection {
+  max-width: 520px;
+  margin: 0 auto;
 }
 
 .btn {
@@ -61,7 +107,7 @@ header p {
   border-radius: 8px;
   cursor: pointer;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: var(--fs-xs);
   transition: all 0.2s ease;
 }
 
@@ -79,7 +125,6 @@ header p {
 /* Secondary/ghost buttons (Sign Out, Deselect all, Select for me) */
 .btn-ghost {
   padding: 8px 14px;
-  font-size: 0.8rem;
   border-color: var(--border);
   color: var(--navy);
 }
@@ -112,14 +157,14 @@ header p {
 }
 
 .panel-header h2 {
-  font-size: 1.25rem;
+  font-size: var(--fs-lg);
   color: var(--navy);
   margin-bottom: 4px;
 }
 
 .panel-header p {
   color: #4b5563;
-  font-size: 0.95rem;
+  font-size: var(--fs-base);
   max-width: 70ch;
 }
 
@@ -129,7 +174,7 @@ header p {
   background: var(--light-gray);
   border: 1px solid var(--border);
   border-radius: 8px;
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
   color: #4b5563;
   max-width: 70ch;
 }
@@ -138,6 +183,49 @@ header p {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
+}
+
+/* ============================================
+   Above-the-fold layout (wide desktop)
+   Mobile-first: one column with the messages rail on top. At >=1024px the
+   groups take ~3/4 on the left and a sticky ~1/4 rail sits on the right
+   (messages today; built to host the knockout "slide" nav later).
+   ============================================ */
+.bracket-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.bracket-side {
+  order: -1; /* messages above the groups on mobile (visible without scrolling) */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Don't reserve visible space in the rail until there's actually a message */
+.side-messages:empty {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .bracket-layout {
+    grid-template-columns: minmax(0, 3fr) minmax(240px, 1fr);
+    align-items: start;
+  }
+
+  .bracket-side {
+    order: 0; /* back to the right-hand column */
+    position: sticky;
+    top: var(--sticky-top);
+  }
+
+  /* Denser grid in the wider left column; the off-screen export grid is untouched */
+  .bracket-main .groups-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
 }
 
 .group-card {
@@ -151,7 +239,8 @@ header p {
 .group-card h3 {
   margin-bottom: 10px;
   color: var(--navy);
-  font-size: 1rem;
+  font-size: var(--fs-base);
+  font-weight: 800;
 }
 
 .group-card ul {
@@ -176,7 +265,7 @@ header p {
 .team-flag {
   width: 1.6rem;
   text-align: center;
-  font-size: 1rem;
+  font-size: var(--fs-base);
 }
 
 .team-name {
@@ -217,7 +306,7 @@ header p {
   background: #fffaf0;
   border: 1px solid var(--gold);
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: var(--fs-xs);
   color: #4b5563;
   max-width: 70ch;
 }
@@ -235,7 +324,7 @@ header p {
   background: #eef2ff;
   border: 1px solid #c7d2fe;
   border-radius: 8px;
-  font-size: 0.9rem;
+  font-size: var(--fs-xs);
 }
 
 /* Top bar: user info (left) + actions (feedback, sign out) on the right */
@@ -265,7 +354,7 @@ header p {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   color: #6b7280;
 }
 
@@ -274,7 +363,7 @@ header p {
   border: 1px solid var(--border);
   border-radius: 6px;
   font: inherit;
-  font-size: 0.85rem;
+  font-size: var(--fs-base);
   max-width: 160px;
 }
 
@@ -289,7 +378,7 @@ header p {
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 10px 16px;
-  font-size: 0.85rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
   text-decoration: none;
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
@@ -326,18 +415,18 @@ header p {
 
 .bracket-export__head h2 {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: var(--fs-xl);
 }
 
 .bracket-export__head span {
   color: var(--ua-gold);
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: var(--fs-xs);
 }
 
 .bracket-toolbar {
   position: sticky;
-  top: 84px;
+  top: var(--sticky-top);
   z-index: 50;
   display: flex;
   flex-wrap: wrap;
@@ -361,7 +450,7 @@ header p {
 }
 
 .progress-text {
-  font-size: 0.85rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
   color: var(--navy);
 }
@@ -391,7 +480,7 @@ header p {
 }
 
 .save-status {
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   color: #6b7280;
   min-width: 110px;
   text-align: right;
@@ -419,7 +508,7 @@ header p {
 }
 
 .group-card__count {
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
   color: #6b7280;
   background: var(--light-gray);
@@ -476,7 +565,7 @@ header p {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   font-weight: 800;
   color: #9ca3af;
   background: #e5e7eb;
@@ -501,7 +590,7 @@ header p {
   flex: 0 0 auto;
   margin-left: auto;
   white-space: nowrap;
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
