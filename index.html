@@ -26,10 +26,10 @@
     <main class="container">
         <!-- Auth Section -->
         <div id="authSection">
-            <!-- Sign-in toasts (the bracket screen has its own messages rail) -->
-            <div id="authAlerts"></div>
+            <!-- Single in-place status for the sign-in screen (the bracket screen has its own messages rail) -->
+            <div id="authAlerts" role="status" aria-live="polite" aria-atomic="true"></div>
             <div class="alert info">
-                <strong>Sign in to save your bracket</strong>
+                <strong>Sign in to make your picks</strong>
             </div>
             <form id="loginForm">
                 <div style="margin-bottom: 15px;">
@@ -72,14 +72,14 @@
                             <button id="randomBtn" type="button" class="btn btn-ghost">Select for me</button>
                             <button id="deselectBtn" type="button" class="btn btn-ghost">Deselect all</button>
                             <button id="exportBtn" type="button" class="btn btn-ghost">Screenshot bracket (PNG)</button>
-                            <button id="saveBtn" type="button" class="btn btn-primary">Save bracket</button>
+                            <button id="saveBtn" type="button" class="btn btn-primary">Submit bracket</button>
                         </div>
                     </div>
 
                     <div class="panel-header">
                         <h2>Group Stage</h2>
                         <p>Tap teams to rank them: first tap is 1st, next is 2nd, and so on. Tap a ranked team to clear it.</p>
-                        <p class="how-it-works">Rank all four in every group. Your 1st and 2nd advance, and this year the 8 best 3rd-place teams advance too, so your full order counts once the knockouts begin. Save when every group has at least its top two.</p>
+                        <p class="how-it-works">Rank all four in every group. Your 1st and 2nd advance, and this year the 8 best 3rd-place teams advance too, so your full order counts once the knockouts begin. Submit when every group has at least its top two.</p>
                     </div>
 
                     <div id="bracket"></div>
@@ -88,7 +88,7 @@
                 <aside class="bracket-side">
                     <!-- Messages / alerts: sticky on desktop, top on mobile. Also the
                          future home of the knockout "slide" nav. -->
-                    <div id="alerts" class="side-messages"></div>
+                    <div id="alerts" class="side-messages" role="status" aria-live="polite" aria-atomic="true"></div>
                     <!-- TODO (Phase 2): knockout slide nav mounts here -->
                 </aside>
             </div>

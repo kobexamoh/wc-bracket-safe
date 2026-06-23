@@ -71,21 +71,52 @@ function emailLocalPart(email) {
 // UI Helpers
 // ============================================
 
-function showAlert(message, type = 'info') {
+// One in-place status message at a time — never stack. A new message replaces
+// whatever's showing (in the bracket's side rail, or the sign-in screen's own
+// area). Transient messages auto-clear; errors persist until the next message.
+const ALERT_DEFAULT_MS = 6000;
+let alertTimer = null;
+
+function alertTarget() {
+  const section = document.getElementById('bracketSection');
+  const onBracket = section && section.style.display !== 'none';
+  return (
+    (onBracket ? document.getElementById('alerts') : document.getElementById('authAlerts')) ||
+    document.getElementById('alerts') ||
+    document.getElementById('authAlerts')
+  );
+}
+
+function clearAllAlerts() {
+  if (alertTimer) {
+    clearTimeout(alertTimer);
+    alertTimer = null;
+  }
+  ['alerts', 'authAlerts'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.replaceChildren();
+  });
+}
+
+function showAlert(message, type = 'info', options = {}) {
+  const target = alertTarget();
+  if (!target) return;
+  // Clear any current message (on either screen) so only one ever shows.
+  clearAllAlerts();
+
   const alertDiv = document.createElement('div');
   alertDiv.className = `alert ${type}`;
   alertDiv.textContent = message;
-  // Messages render in the bracket's side rail; the sign-in screen has its own
-  // area. Target whichever matches the visible screen (with a safe fallback).
-  const section = document.getElementById('bracketSection');
-  const onBracket = section && section.style.display !== 'none';
-  const target =
-    (onBracket ? document.getElementById('alerts') : document.getElementById('authAlerts')) ||
-    document.getElementById('alerts') ||
-    document.getElementById('authAlerts');
-  if (!target) return;
-  target.appendChild(alertDiv);
-  setTimeout(() => alertDiv.remove(), 5000);
+  target.replaceChildren(alertDiv);
+
+  // Errors stay until the next action replaces them; everything else fades out.
+  const persist = options.persist ?? (type === 'error');
+  if (!persist) {
+    const ms = options.duration ?? ALERT_DEFAULT_MS;
+    alertTimer = setTimeout(() => {
+      if (target.firstChild === alertDiv) target.replaceChildren();
+    }, ms);
+  }
 }
 
 function showAuthSection() {
@@ -206,7 +237,7 @@ function handleDeselectAll() {
 function handleSelectForMe() {
   picks = randomPicks();
   afterPicksChanged();
-  showAlert('🎲 Picked a random bracket for you — tweak it or save', 'info');
+  showAlert('🎲 Picked a random bracket for you — tweak it, then submit.', 'info');
 }
 
 // Download the current bracket as a branded PNG (html2canvas is lazy-loaded).
@@ -236,7 +267,7 @@ async function handleExport() {
 
 async function handleSave() {
   if (!currentUser) {
-    showAlert('❌ Please sign in before saving', 'error');
+    showAlert('❌ Please sign in before submitting', 'error');
     return;
   }
   // Require at least the advancing pair (2) in every group before saving.
@@ -244,7 +275,7 @@ async function handleSave() {
   if (incomplete.length) {
     const list = incomplete.slice(0, 4).map((code) => `Group ${code}`).join(', ');
     const more = incomplete.length > 4 ? `, +${incomplete.length - 4} more` : '';
-    showAlert(`❌ Pick ${ADVANCE_COUNT} teams in every group before saving — still need: ${list}${more}`, 'error');
+    showAlert(`❌ Pick ${ADVANCE_COUNT} teams in every group before submitting — still need: ${list}${more}`, 'error');
     return;
   }
   // A draft write may be queued; cancel it so it can't overwrite the save status.
@@ -254,9 +285,9 @@ async function handleSave() {
   }
   if (saveBtn) {
     saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving…';
+    saveBtn.textContent = 'Submitting…';
   }
-  setSaveStatus('Saving…');
+  setSaveStatus('Submitting…');
   try {
     const saved = await savePicks(supabase, currentUser.id, picks);
     picks = saved.picks;
@@ -264,16 +295,20 @@ async function handleSave() {
     loadedUpdatedAt = saved.updatedAt;
     clearDraft(draftStorage, currentUser.id); // DB is now the source of truth
     renderBracketUI();
-    setSaveStatus('Saved ✓');
-    showAlert('✅ Bracket saved', 'success');
+    setSaveStatus('Submitted ✓');
+    showAlert(
+      '✅ Bracket submitted! Log back in anytime to change it, screenshot it for the team in Campfire, or clear it to start a new one.',
+      'success',
+      { duration: 9000 }
+    );
   } catch (err) {
     console.error('Save error:', err);
-    setSaveStatus('Not saved');
-    showAlert(`❌ Save failed: ${err.message}`, 'error');
+    setSaveStatus('Not submitted');
+    showAlert(`❌ Couldn't submit your bracket: ${err.message}`, 'error');
   } finally {
     if (saveBtn) {
       saveBtn.disabled = false;
-      saveBtn.textContent = 'Save bracket';
+      saveBtn.textContent = 'Submit bracket';
     }
   }
 }
