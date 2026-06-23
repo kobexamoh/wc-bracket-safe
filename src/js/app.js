@@ -75,18 +75,31 @@ function showAlert(message, type = 'info') {
   const alertDiv = document.createElement('div');
   alertDiv.className = `alert ${type}`;
   alertDiv.textContent = message;
-  document.getElementById('alerts').appendChild(alertDiv);
+  // Messages render in the bracket's side rail; the sign-in screen has its own
+  // area. Target whichever matches the visible screen (with a safe fallback).
+  const section = document.getElementById('bracketSection');
+  const onBracket = section && section.style.display !== 'none';
+  const target =
+    (onBracket ? document.getElementById('alerts') : document.getElementById('authAlerts')) ||
+    document.getElementById('alerts') ||
+    document.getElementById('authAlerts');
+  if (!target) return;
+  target.appendChild(alertDiv);
   setTimeout(() => alertDiv.remove(), 5000);
 }
 
 function showAuthSection() {
   document.getElementById('authSection').style.display = 'block';
   document.getElementById('bracketSection').style.display = 'none';
+  const headerActions = document.getElementById('headerActions');
+  if (headerActions) headerActions.style.display = 'none'; // Sign Out hidden when logged out
 }
 
 function showBracketSection() {
   document.getElementById('authSection').style.display = 'none';
   document.getElementById('bracketSection').style.display = 'block';
+  const headerActions = document.getElementById('headerActions');
+  if (headerActions) headerActions.style.display = 'flex'; // Sign Out in the header when logged in
 }
 
 // ============================================

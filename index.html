@@ -12,16 +12,22 @@
 </head>
 <body>
     <header>
-        <h1>⚽ 2026 World Cup Bracket Predictor</h1>
-        <p>Predict the tournament winner and share with your team</p>
+        <div class="header-inner">
+            <div class="header-title">
+                <h1>⚽ 2026 World Cup Bracket Predictor</h1>
+                <p>Predict the tournament winner and share with your team</p>
+            </div>
+            <div id="headerActions" class="header-actions" style="display: none;">
+                <button id="logoutBtn" type="button" class="btn btn-ghost">Sign Out</button>
+            </div>
+        </div>
     </header>
 
     <main class="container">
-        <!-- Messages (top of viewport so save success/errors are visible without scrolling) -->
-        <div id="alerts"></div>
-
         <!-- Auth Section -->
         <div id="authSection">
+            <!-- Sign-in toasts (the bracket screen has its own messages rail) -->
+            <div id="authAlerts"></div>
             <div class="alert info">
                 <strong>Sign in to save your bracket</strong>
             </div>
@@ -32,7 +38,7 @@
                         id="emailInput" 
                         placeholder="your@email.com" 
                         required
-                        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px;"
+                        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-size: var(--fs-base);"
                     >
                 </div>
                 <button id="loginBtn" type="submit" class="btn">Sign In with Email</button>
@@ -51,31 +57,41 @@
                         <span class="name-field__label">Your name</span>
                         <input id="displayNameInput" type="text" maxlength="40" autocomplete="name" placeholder="for your screenshot">
                     </label>
-                    <button id="logoutBtn" type="button" class="btn btn-ghost">Sign Out</button>
                 </div>
             </div>
 
-            <div class="bracket-toolbar">
-                <div class="bracket-progress">
-                    <span id="progressText" class="progress-text">0 / 12 groups set</span>
-                    <div class="progress-track"><div id="progressBar" class="progress-fill"></div></div>
-                </div>
-                <div class="bracket-actions">
-                    <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
-                    <button id="randomBtn" type="button" class="btn btn-ghost">Select for me</button>
-                    <button id="deselectBtn" type="button" class="btn btn-ghost">Deselect all</button>
-                    <button id="exportBtn" type="button" class="btn btn-ghost">Screenshot bracket (PNG)</button>
-                    <button id="saveBtn" type="button" class="btn btn-primary">Save bracket</button>
-                </div>
-            </div>
+            <div class="bracket-layout">
+                <div class="bracket-main">
+                    <div class="bracket-toolbar">
+                        <div class="bracket-progress">
+                            <span id="progressText" class="progress-text">0 / 12 groups set</span>
+                            <div class="progress-track"><div id="progressBar" class="progress-fill"></div></div>
+                        </div>
+                        <div class="bracket-actions">
+                            <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
+                            <button id="randomBtn" type="button" class="btn btn-ghost">Select for me</button>
+                            <button id="deselectBtn" type="button" class="btn btn-ghost">Deselect all</button>
+                            <button id="exportBtn" type="button" class="btn btn-ghost">Screenshot bracket (PNG)</button>
+                            <button id="saveBtn" type="button" class="btn btn-primary">Save bracket</button>
+                        </div>
+                    </div>
 
-            <div class="panel-header">
-                <h2>Group Stage</h2>
-                <p>Tap teams to rank them: first tap is 1st, next is 2nd, and so on. Tap a ranked team to clear it.</p>
-                <p class="how-it-works">Rank all four in every group. Your 1st and 2nd advance, and this year the 8 best 3rd-place teams advance too, so your full order counts once the knockouts begin. Save when every group has at least its top two.</p>
-            </div>
+                    <div class="panel-header">
+                        <h2>Group Stage</h2>
+                        <p>Tap teams to rank them: first tap is 1st, next is 2nd, and so on. Tap a ranked team to clear it.</p>
+                        <p class="how-it-works">Rank all four in every group. Your 1st and 2nd advance, and this year the 8 best 3rd-place teams advance too, so your full order counts once the knockouts begin. Save when every group has at least its top two.</p>
+                    </div>
 
-            <div id="bracket"></div>
+                    <div id="bracket"></div>
+                </div>
+
+                <aside class="bracket-side">
+                    <!-- Messages / alerts: sticky on desktop, top on mobile. Also the
+                         future home of the knockout "slide" nav. -->
+                    <div id="alerts" class="side-messages"></div>
+                    <!-- TODO (Phase 2): knockout slide nav mounts here -->
+                </aside>
+            </div>
         </div>
     </main>
 
