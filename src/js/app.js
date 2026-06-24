@@ -131,6 +131,97 @@ function showBracketSection() {
   document.getElementById('bracketSection').style.display = 'block';
   const headerActions = document.getElementById('headerActions');
   if (headerActions) headerActions.style.display = 'flex'; // Sign Out in the header when logged in
+  maybeAutoOpenHelp(); // first-time onboarding overlay (once per browser)
+}
+
+// ============================================
+// How-it-works modal (onboarding overlay)
+// ============================================
+const helpModal = document.getElementById('helpModal');
+const helpBtn = document.getElementById('helpBtn');
+const helpDialog = helpModal ? helpModal.querySelector('.modal__dialog') : null;
+const HELP_SEEN_KEY = 'wc-bracket:seen-help';
+let lastFocusedBeforeHelp = null;
+
+// Seen-once flag lives in the same guarded localStorage handle as the draft.
+function helpAlreadySeen() {
+  if (!draftStorage) return false;
+  try {
+    return draftStorage.getItem(HELP_SEEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markHelpSeen() {
+  if (!draftStorage) return;
+  try {
+    draftStorage.setItem(HELP_SEEN_KEY, '1');
+  } catch {
+    /* private mode / quota - ignore */
+  }
+}
+
+// Visible, focusable controls inside a container (for the Tab focus-trap).
+function getFocusable(container) {
+  return Array.from(
+    container.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  ).filter((el) => el.offsetParent !== null);
+}
+
+// Esc closes; Tab cycles within the dialog so focus can't slip behind it.
+function onHelpKeydown(e) {
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeHelp();
+    return;
+  }
+  if (e.key !== 'Tab' || !helpDialog) return;
+  const focusable = getFocusable(helpDialog);
+  if (!focusable.length) {
+    e.preventDefault();
+    helpDialog.focus();
+    return;
+  }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const active = document.activeElement;
+  if (e.shiftKey && (active === first || active === helpDialog)) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && active === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
+function openHelp() {
+  if (!helpModal) return;
+  lastFocusedBeforeHelp = document.activeElement;
+  helpModal.hidden = false;
+  document.body.style.overflow = 'hidden'; // lock background scroll
+  document.addEventListener('keydown', onHelpKeydown, true);
+  if (helpDialog) helpDialog.focus(); // move focus in for Esc + screen readers
+}
+
+function closeHelp() {
+  if (!helpModal || helpModal.hidden) return;
+  helpModal.hidden = true;
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', onHelpKeydown, true);
+  if (lastFocusedBeforeHelp && typeof lastFocusedBeforeHelp.focus === 'function') {
+    lastFocusedBeforeHelp.focus(); // restore focus to the trigger
+  }
+  lastFocusedBeforeHelp = null;
+}
+
+// Auto-open the explainer once per browser, the first time the bracket appears.
+function maybeAutoOpenHelp() {
+  if (!helpModal || helpAlreadySeen()) return;
+  markHelpSeen();
+  openHelp();
 }
 
 // ============================================
@@ -476,6 +567,14 @@ if (nameInput) nameInput.addEventListener('input', () => {
   if (currentUser) persistName(currentUser.id, nameInput.value.trim());
 });
 if (bracketEl) bracketEl.addEventListener('click', onBracketClick);
+
+// How-it-works modal: open from the header button; close via ×, "Got it", or backdrop.
+if (helpBtn) helpBtn.addEventListener('click', openHelp);
+if (helpModal) {
+  helpModal.querySelectorAll('[data-close-help]').forEach((el) => {
+    el.addEventListener('click', closeHelp);
+  });
+}
 
 // Flush a pending draft synchronously before the page is hidden or unloaded, so
 // a refresh inside the debounce window still persists the latest picks.

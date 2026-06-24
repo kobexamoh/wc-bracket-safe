@@ -168,15 +168,42 @@ header p {
   max-width: 70ch;
 }
 
-.how-it-works {
+.panel-header {
+  margin-bottom: 18px;
+}
+
+/* Heading + "How it works" trigger share a row above the instructions */
+.panel-header__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.panel-header__top h2 {
+  margin-bottom: 0;
+}
+
+.btn-help {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* Coloured callout that carries the ranking instructions, set apart from the grid */
+.instructions-callout {
+  padding: 12px 14px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+}
+
+.instructions-callout p {
+  color: #374151;
+}
+
+.instructions-callout p + p {
   margin-top: 8px;
-  padding: 10px 12px;
-  background: var(--light-gray);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: var(--fs-base);
-  color: #4b5563;
-  max-width: 70ch;
 }
 
 .groups-grid {
@@ -598,4 +625,100 @@ header p {
   background: var(--gold);
   border-radius: 999px;
   padding: 2px 8px;
+}
+
+/* ============================================
+   How-it-works modal (onboarding overlay)
+   ============================================ */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal[hidden] {
+  display: none;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.modal__dialog {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 560px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.35);
+}
+
+.modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal__head h2 {
+  font-size: var(--fs-lg);
+  color: var(--navy);
+}
+
+.modal__close {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  color: var(--navy);
+  font-size: var(--fs-lg);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal__close:hover {
+  background: var(--light-gray);
+}
+
+.modal__body {
+  padding: 18px 20px;
+}
+
+.modal__body h3 {
+  font-size: var(--fs-base);
+  color: var(--navy);
+  margin-top: 16px;
+  margin-bottom: 4px;
+}
+
+.modal__body p {
+  color: #4b5563;
+  font-size: var(--fs-base);
+}
+
+.modal__lead {
+  margin-bottom: 4px;
+}
+
+.modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
 }
