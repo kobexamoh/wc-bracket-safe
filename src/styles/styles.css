@@ -543,6 +543,30 @@ header p {
   padding: 2px 8px;
 }
 
+.group-card__head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Small per-group reset; pill styling matches the count + advance tag */
+.group-card__clear {
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--navy);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.group-card__clear:hover {
+  background: var(--navy);
+  color: var(--gold);
+}
+
 .group-card.is-complete {
   border-color: var(--gold);
   box-shadow: 0 1px 3px rgba(34, 37, 82, 0.08);

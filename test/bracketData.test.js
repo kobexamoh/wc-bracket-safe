@@ -68,3 +68,12 @@ test('randomPicks is deterministic with an injected RNG', () => {
   const picks = randomPicks(() => 0);
   assert.deepEqual(picks.A, ['South Africa', 'South Korea']);
 });
+
+test('group card shows a per-group clear control only when that group has picks', () => {
+  const empty = renderBracket();
+  assert.equal(/data-clear-group/.test(empty), false);
+
+  const withPick = renderBracket({ A: ['Mexico'] });
+  assert.match(withPick, /data-clear-group="A"/);
+  assert.equal(/data-clear-group="B"/.test(withPick), false); // untouched groups have none
+});

@@ -75,12 +75,16 @@ export function renderBracket(picks = {}) {
 function renderGroupCard(group, ranked) {
   const chosen = Math.min(ranked.length, MAX_RANK);
   const complete = ranked.length >= ADVANCE_COUNT;
+  const hasPicks = ranked.length > 0;
 
   return `
     <article class="group-card${complete ? ' is-complete' : ''}" data-group="${group.code}">
       <div class="group-card__head">
         <h3>${esc(group.label)}</h3>
-        <span class="group-card__count">${chosen}/${MAX_RANK}</span>
+        <div class="group-card__head-actions">
+          <span class="group-card__count">${chosen}/${MAX_RANK}</span>
+          ${hasPicks ? `<button type="button" class="group-card__clear" data-clear-group="${group.code}" title="Clear your picks for ${esc(group.label)}" aria-label="Clear ${esc(group.label)}">Clear</button>` : ''}
+        </div>
       </div>
       <ul>
         ${group.teams.map((team, index) => renderTeamRow(group.code, team, index, ranked)).join('')}

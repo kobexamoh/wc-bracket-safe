@@ -305,6 +305,13 @@ function afterPicksChanged() {
 }
 
 function onBracketClick(e) {
+  // Per-group reset takes priority: it has no data-index, so it isn't a team.
+  const clearBtn = e.target.closest('button[data-clear-group]');
+  if (clearBtn) {
+    clearGroup(clearBtn.dataset.clearGroup);
+    return;
+  }
+
   const btn = e.target.closest('button[data-group]');
   if (!btn) return;
   const group = btn.dataset.group;
@@ -314,6 +321,19 @@ function onBracketClick(e) {
 
   togglePick(group, teamName);
   afterPicksChanged();
+}
+
+// Clear one group's picks; the rest of the bracket is untouched. Single-group
+// clears are low-stakes and quickly re-entered, so no confirm (the global
+// Deselect all keeps its confirm because it wipes everything).
+function clearGroup(group) {
+  if (!group || !picks[group]) return; // nothing to clear
+  delete picks[group];
+  afterPicksChanged();
+  // The Clear control just unmounted; move focus to this group's first team so
+  // keyboard users aren't dropped to the top of the document.
+  const firstTeam = bracketEl?.querySelector(`.group-card[data-group="${group}"] .team-row`);
+  if (firstTeam) firstTeam.focus();
 }
 
 // Clear every pick at once (with a quick confirm), then autosave the empty draft.
