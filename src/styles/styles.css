@@ -18,8 +18,6 @@
   --fs-lg: 1.25rem;     /* 20px   - section heading */
   --fs-xl: 1.5625rem;   /* 25px   - overlay/dialog title (help modal) */
   --fs-2xl: 2rem;       /* 32px   - display: page title + export title */
-  /* Sticky offset (~header height) so the toolbar + side rail pin just below it */
-  --sticky-top: 84px;
 }
 
 * {
@@ -37,13 +35,12 @@ body {
   overflow-x: hidden;
 }
 
+/* The branded masthead scrolls away with the page; the bracket toolbar is the
+   single sticky layer (below), so there's no two-sticky overlap to manage. */
 header {
   background-color: var(--ua-green);
   color: white;
   padding: 16px 20px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
 }
 
 /* App header: title on the left, account actions (Sign Out) pinned top-right */
@@ -99,20 +96,6 @@ header p {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-
-/* Mobile: the account row wraps below the title (instead of squeezing it), and the
-   display title + padding shrink so the sticky green header stays compact */
-@media (max-width: 640px) {
-  header {
-    padding: 12px 16px;
-  }
-  header h1 {
-    font-size: var(--fs-xl);
-  }
-  .header-user {
-    max-width: 100%;
-  }
 }
 
 /* Utilities */
@@ -295,7 +278,7 @@ header p {
   .bracket-side {
     order: 0; /* back to the right-hand column */
     position: sticky;
-    top: var(--sticky-top);
+    top: 0;
   }
 
   /* Denser grid in the wider left column; the off-screen export grid is untouched */
@@ -454,6 +437,21 @@ header p {
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.22);
 }
 
+/* Mobile-only sticky bottom Submit bar (hidden on desktop, where the toolbar pins) */
+.submit-bar-mobile {
+  display: none;
+}
+
+.submit-bar-mobile__progress {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--navy);
+}
+
 /* Off-screen branded card used only to render the downloadable PNG */
 .bracket-export {
   position: fixed;
@@ -490,7 +488,7 @@ header p {
 
 .bracket-toolbar {
   position: sticky;
-  top: var(--sticky-top);
+  top: 0;
   z-index: 50;
   display: flex;
   flex-wrap: wrap;
@@ -782,4 +780,58 @@ header p {
   justify-content: flex-end;
   padding: 16px 20px;
   border-top: 1px solid var(--border);
+}
+
+/* ============================================
+   Mobile (phones) — kept LAST so these overrides win over the base rules above.
+   Media queries don't add specificity, so source order breaks the tie; placing
+   this block earlier let later base rules (e.g. .submit-bar-mobile display:none,
+   .bracket-toolbar position:sticky) override it.
+   ============================================ */
+@media (max-width: 640px) {
+  /* Compact masthead: the account row wraps below the title; tame the display title */
+  header {
+    padding: 12px 16px;
+  }
+  header h1 {
+    font-size: var(--fs-xl);
+  }
+  .header-user {
+    max-width: 100%;
+  }
+  /* The toolbar wraps to several rows on phones; keep it in normal flow (not
+     sticky) so it never eats the small viewport */
+  .bracket-toolbar {
+    position: static;
+  }
+  /* The bottom bar carries Submit on phones; hide the duplicate in the toolbar */
+  #saveBtn {
+    display: none;
+  }
+  /* With the toolbar in-flow, a fixed bottom bar keeps Submit one tap away */
+  .submit-bar-mobile {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 150;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #ffffff;
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 14px rgba(15, 23, 42, 0.10);
+  }
+  .submit-bar-mobile__btn {
+    flex: 0 0 auto;
+  }
+  /* Keep the last group above the fixed bar, and lift the feedback FAB over it */
+  body {
+    padding-bottom: 76px;
+  }
+  .feedback-fab {
+    bottom: 84px;
+  }
 }

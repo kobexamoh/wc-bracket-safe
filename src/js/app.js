@@ -237,15 +237,29 @@ const nameInput = document.getElementById('displayNameInput');
 const saveStatusEl = document.getElementById('saveStatus');
 const progressTextEl = document.getElementById('progressText');
 const progressBarEl = document.getElementById('progressBar');
+// Mobile-only mirror controls (the sticky bottom Submit bar)
+const saveBtnMobile = document.getElementById('saveBtnMobile');
+const progressTextElMobile = document.getElementById('progressTextMobile');
 
 function setSaveStatus(text) {
   if (saveStatusEl) saveStatusEl.textContent = text;
 }
 
+// Submit appears twice (desktop toolbar + mobile bottom bar); toggle both together.
+function setSubmitButtons(disabled, label) {
+  [saveBtn, saveBtnMobile].forEach((btn) => {
+    if (!btn) return;
+    btn.disabled = disabled;
+    btn.textContent = label;
+  });
+}
+
 function updateProgress() {
   const groups = getGroupOrder();
   const done = groups.filter((code) => (picks[code]?.length || 0) >= ADVANCE_COUNT).length;
-  if (progressTextEl) progressTextEl.textContent = `${done} / ${groups.length} groups set`;
+  const label = `${done} / ${groups.length} groups set`;
+  if (progressTextEl) progressTextEl.textContent = label;
+  if (progressTextElMobile) progressTextElMobile.textContent = label;
   if (progressBarEl) progressBarEl.style.transform = `scaleX(${done / groups.length})`;
 }
 
@@ -394,10 +408,7 @@ async function handleSave() {
     clearTimeout(draftTimer);
     draftTimer = null;
   }
-  if (saveBtn) {
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Submitting…';
-  }
+  setSubmitButtons(true, 'Submitting…');
   setSaveStatus('Submitting…');
   try {
     const saved = await savePicks(supabase, currentUser.id, picks);
@@ -417,10 +428,7 @@ async function handleSave() {
     setSaveStatus('Not submitted');
     showAlert(`❌ Couldn't submit your bracket: ${err.message}`, 'error');
   } finally {
-    if (saveBtn) {
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Submit bracket';
-    }
+    setSubmitButtons(false, 'Submit bracket');
   }
 }
 
@@ -580,6 +588,7 @@ async function loadBracket() {
 document.getElementById('loginForm').addEventListener('submit', handleLogin);
 document.getElementById('logoutBtn').addEventListener('click', handleLogout);
 if (saveBtn) saveBtn.addEventListener('click', handleSave);
+if (saveBtnMobile) saveBtnMobile.addEventListener('click', handleSave);
 if (deselectBtn) deselectBtn.addEventListener('click', handleDeselectAll);
 if (randomBtn) randomBtn.addEventListener('click', handleSelectForMe);
 if (exportBtn) exportBtn.addEventListener('click', handleExport);

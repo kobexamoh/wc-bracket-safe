@@ -95,6 +95,12 @@
                     <!-- TODO (Phase 2): knockout slide nav mounts here -->
                 </aside>
             </div>
+
+            <!-- Mobile-only sticky Submit bar: on phones the toolbar scrolls away in-flow, so keep Submit one tap away -->
+            <div class="submit-bar-mobile">
+                <span id="progressTextMobile" class="submit-bar-mobile__progress">0 / 12 groups set</span>
+                <button id="saveBtnMobile" type="button" class="btn btn-primary submit-bar-mobile__btn" title="Submit your bracket (needs at least 2 picks in every group)">Submit bracket</button>
+            </div>
         </div>
     </main>
 
