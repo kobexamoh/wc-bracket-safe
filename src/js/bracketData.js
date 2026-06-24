@@ -62,17 +62,18 @@ export function randomPicks(rng = Math.random) {
  * (index 0 = 1st). Each team is a button so it is clickable + keyboard friendly;
  * click handling lives in app.js via event delegation.
  */
-export function renderBracket(picks = {}) {
+export function renderBracket(picks = {}, options = {}) {
+  const { showClearButtons = true } = options;
   const groups = getTournamentGroups();
 
   return `
     <div class="groups-grid">
-      ${groups.map((group) => renderGroupCard(group, picks[group.code] || [])).join('')}
+      ${groups.map((group) => renderGroupCard(group, picks[group.code] || [], showClearButtons)).join('')}
     </div>
   `;
 }
 
-function renderGroupCard(group, ranked) {
+function renderGroupCard(group, ranked, showClearButtons = true) {
   const chosen = Math.min(ranked.length, MAX_RANK);
   const complete = ranked.length >= ADVANCE_COUNT;
   const hasPicks = ranked.length > 0;
@@ -83,7 +84,7 @@ function renderGroupCard(group, ranked) {
         <h3>${esc(group.label)}</h3>
         <div class="group-card__head-actions">
           <span class="group-card__count">${chosen}/${MAX_RANK}</span>
-          ${hasPicks ? `<button type="button" class="group-card__clear" data-clear-group="${group.code}" title="Clear your picks for ${esc(group.label)}" aria-label="Clear ${esc(group.label)}">Clear</button>` : ''}
+          ${hasPicks && showClearButtons ? `<button type="button" class="group-card__clear" data-clear-group="${group.code}" title="Clear your picks for ${esc(group.label)}" aria-label="Clear ${esc(group.label)}">Clear</button>` : ''}
         </div>
       </div>
       <ul>

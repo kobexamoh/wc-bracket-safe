@@ -70,7 +70,8 @@ function buildExportNode(doc, picks, width, title) {
   node.appendChild(head);
 
   // renderBracket() returns trusted markup built from the known team list.
-  node.insertAdjacentHTML('beforeend', renderBracket(picks));
+  // Hide the per-group Clear control — it isn't useful in a static screenshot.
+  node.insertAdjacentHTML('beforeend', renderBracket(picks, { showClearButtons: false }));
   return node;
 }
 

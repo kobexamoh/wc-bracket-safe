@@ -514,7 +514,7 @@ async function checkAuth() {
       
       // Display user info (redacted email for privacy)
       const userInfoDiv = document.getElementById('userInfo');
-      userInfoDiv.textContent = `👤 Logged in as: ${redactEmail(currentUser.email)}`;
+      userInfoDiv.textContent = `Logged in as: ${redactEmail(currentUser.email)}`;
     } else {
       showAuthSection();
     }
