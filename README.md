@@ -18,7 +18,7 @@ A single-page app for a friendly office World Cup pool:
 - **A few conveniences:** download your bracket as an image for the group chat, fill the rest with **Select for me** (it asks whether to fill just the blanks, re-roll only the groups you pick, or replace everything — so it never clobbers your picks by surprise), wipe the slate with **Deselect all**, and flag anything broken via a quiet **Report a bug** button.
 - **A built-in explainer.** A "How this bracket works" pop-up opens once for newcomers (and waits behind a button after that), so coworkers who don't follow soccer aren't left guessing.
 - **Fix one group at a time.** Each group has its own **Clear**, so a single bad guess doesn't cost you the whole bracket.
-- **It behaves on a phone.** The layout reflows for phones and tablets, with the Submit button parked in a fixed bar at the bottom so it's always a tap away.
+- **It behaves on a phone.** The layout reflows for phones and tablets; the action buttons ride in a compact bar that stays put as you scroll, and Submit sits in a fixed bar at the bottom so it's always a tap away.
 
 That's the whole job — plus a pile of quality-of-life touches that arrived after kickoff (Chapters IV through VII). It does that job and then stops, which is more than can be said for most software.
 
@@ -71,6 +71,7 @@ The last big pass was making it pleasant on whatever screen people actually use:
 - **Properly responsive, at last.** The branded header now scrolls away while a single action bar stays put — no more two sticky things fighting over the top of the screen. On phones and tablets the **Submit** button rides in a fixed bar at the bottom so it's always a tap away, and status messages follow whichever bar is on screen so you're never left wondering if a tap did anything. (Getting there meant learning, the hard way, that a CSS media query can be quietly overruled by a rule written further down the file.)
 - **A second look from the AI-tells detector.** This time it flagged the typeface as a fallback — except the web font *was* loading; the detector just measures it headless, before the font arrives. Confirmed in a real browser, left as-is. The page title did get an honest size bump so the hierarchy reads clearly.
 - **A quiet bug, squashed.** The exported screenshot had started smuggling the per-group **Clear** button into the picture. It no longer does.
+- **The action bar comes along for the ride.** On phones the toolbar used to scroll away; now it's a compact sticky bar, so **Select for me**, **Deselect all**, and the screenshot button stay one tap away while you scroll the groups (Submit and the running count live in the bottom bar).
 
 ---
 
