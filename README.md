@@ -15,7 +15,7 @@ A single-page app for a friendly office World Cup pool:
 - **Submit your bracket.** It lands in a database row that is yours and yours alone — enforced by the server, not by good manners.
 - **Come back later.** Your picks are waiting, exactly where you left them.
 - **Autosave has your back.** Drafts are kept in your browser as you click, so an accidental refresh can't eat your picks — only a deliberate **Submit** saves the finished bracket.
-- **A few conveniences:** download your bracket as an image for the group chat, fill in the groups you haven't set with **Select for me** (it ranks all four and leaves picks you've already made alone), wipe the slate with **Deselect all**, and flag anything broken via a quiet **Report a bug** button.
+- **A few conveniences:** download your bracket as an image for the group chat, fill the rest with **Select for me** (it asks whether to fill just the blanks, re-roll only the groups you pick, or replace everything — so it never clobbers your picks by surprise), wipe the slate with **Deselect all**, and flag anything broken via a quiet **Report a bug** button.
 - **A built-in explainer.** A "How this bracket works" pop-up opens once for newcomers (and waits behind a button after that), so coworkers who don't follow soccer aren't left guessing.
 - **Fix one group at a time.** Each group has its own **Clear**, so a single bad guess doesn't cost you the whole bracket.
 - **It behaves on a phone.** The layout reflows for phones and tablets, with the Submit button parked in a fixed bar at the bottom so it's always a tap away.
@@ -175,7 +175,7 @@ The launch did exactly one thing well and saved the rest for daylight:
 
 - **Phase 1.5 — ✅ shipped.** Autosave drafts and image export both landed (see Chapter IV), alongside a round of UX fixes from testing it on myself.
 - **Phase ~1.75** — mostly handled now — branded sign-in emails, deliverability sorted (a verified custom SMTP subdomain), the redirect taught to come home, and a same-browser hint shipped. The fallback to a 6-digit code, should corporate mail ever get fussy, is still on the shelf.
-- **Post-launch polish — shipped.** A single in-place status line, a how-it-works explainer, per-group clear, a full responsive pass for phones and tablets (Chapters VI–VII), and a safer **Select for me** that fills only the groups you haven't set (ranking all four) and asks before replacing a full bracket.
+- **Post-launch polish — shipped.** A single in-place status line, a how-it-works explainer, per-group clear, a full responsive pass for phones and tablets (Chapters VI–VII), and a safer **Select for me** that lets you fill only the blanks, re-roll selected groups, or replace everything (never overwriting your picks by surprise).
 - **Next, before the knockouts** — cross-platform flag rendering (a few flags fall back to letter-boxes on Windows) and a more celebratory submit confirmation.
 - **Phase 2** — the knockout rounds, and a quiet notification when someone submits a bracket.
 - **Phase 3** — a scoring engine and a leaderboard, so the per-round prizes have something to measure. *(This is the part I promised coworkers out loud before building it, which is the traditional order of operations.)*

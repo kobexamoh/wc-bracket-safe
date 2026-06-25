@@ -65,19 +65,42 @@ export function randomPicks(rng = Math.random) {
 }
 
 /**
- * Non-destructive fill for "Select for me": keep any group the user has already
- * started (>=1 pick) exactly as-is (defensive-copied), and fill every empty
- * group with a fresh full random order. Returns a NEW object and never mutates
- * the input. When no group is empty the result equals the input (the caller
- * uses that to offer a full-replace confirm instead).
+ * "Fill in the blanks" for "Select for me": complete every group to a full
+ * 1st->4th order WITHOUT moving any team the user already placed. Placed teams
+ * keep their ranks; the group's remaining teams are shuffled into the empty
+ * ranks. Returns a NEW object and never mutates the input. (A fully-empty group
+ * gets a fresh full random order; a complete group is returned unchanged.)
  */
-export function fillEmptyGroups(existing = {}, rng = Math.random) {
+export function fillBlankRanks(existing = {}, rng = Math.random) {
   const next = {};
   for (const code of getGroupOrder()) {
-    const current = existing[code];
-    next[code] = Array.isArray(current) && current.length
-      ? [...current]
-      : randomGroupOrder(code, rng);
+    const teams = getGroupTeamNames(code);
+    const placed = (Array.isArray(existing[code]) ? existing[code] : []).filter((t) => teams.includes(t));
+    const remaining = teams.filter((t) => !placed.includes(t));
+    for (let i = remaining.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
+    }
+    next[code] = [...placed, ...remaining].slice(0, MAX_RANK);
+  }
+  return next;
+}
+
+/**
+ * "Replace selected groups" for "Select for me": fully re-roll only the given
+ * group codes (a fresh full random order each), leaving every other group's
+ * existing picks exactly as they were (defensive-copied). Unknown codes are
+ * ignored. Returns a NEW object and never mutates the input.
+ */
+export function randomizeGroups(existing = {}, codes = [], rng = Math.random) {
+  const codeSet = new Set(codes);
+  const next = {};
+  for (const code of getGroupOrder()) {
+    if (codeSet.has(code) && getGroupTeamNames(code).length) {
+      next[code] = randomGroupOrder(code, rng);
+    } else if (Array.isArray(existing[code]) && existing[code].length) {
+      next[code] = [...existing[code]];
+    }
   }
   return next;
 }

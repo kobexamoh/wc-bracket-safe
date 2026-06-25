@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getTournamentGroups, getGroupOrder, getGroupTeamNames, renderBracket, randomPicks, fillEmptyGroups, MAX_RANK } from '../src/js/bracketData.js';
+import { getTournamentGroups, getGroupOrder, getGroupTeamNames, renderBracket, randomPicks, fillBlankRanks, randomizeGroups, MAX_RANK } from '../src/js/bracketData.js';
 
 test('tournament groups include all 12 groups and four teams each', () => {
   const groups = getTournamentGroups();
@@ -69,32 +69,51 @@ test('randomPicks is deterministic with an injected RNG', () => {
   assert.deepEqual(picks.A, ['South Africa', 'South Korea', 'Czech Rep.', 'Mexico']);
 });
 
-test('fillEmptyGroups leaves started groups untouched and fills empty ones to four', () => {
-  const started = ['Mexico', 'South Korea']; // Group A, user-picked
-  const out = fillEmptyGroups({ A: started }, () => 0);
+test('fillBlankRanks keeps placed teams and completes the group to four', () => {
+  // Group A teams: Mexico, South Africa, South Korea, Czech Rep.
+  const out = fillBlankRanks({ A: ['Mexico'] }, () => 0);
 
-  assert.deepEqual(out.A, started);  // preserved exactly
-  assert.notEqual(out.A, started);   // but a copy, not the same array ref
-  const others = getGroupOrder().filter((code) => code !== 'A');
-  assert.equal(others.every((code) => out[code].length === MAX_RANK), true);
+  assert.equal(out.A[0], 'Mexico');             // placed team keeps 1st
+  assert.equal(out.A.length, MAX_RANK);         // completed to four
+  assert.equal(new Set(out.A).size, MAX_RANK);  // no duplicates
+  assert.equal(out.A.every((t) => getGroupTeamNames('A').includes(t)), true);
 });
 
-test('fillEmptyGroups treats a partially-filled group as started (does not overwrite)', () => {
-  const out = fillEmptyGroups({ A: ['Mexico'] }, () => 0);
-  assert.deepEqual(out.A, ['Mexico']);
+test('fillBlankRanks fills a fully-empty group with all four', () => {
+  const out = fillBlankRanks({}, () => 0);
+  assert.equal(getGroupOrder().every((code) => out[code].length === MAX_RANK), true);
 });
 
-test('fillEmptyGroups fills all 12 when nothing is set yet', () => {
-  const out = fillEmptyGroups({}, () => 0);
-  const codes = getGroupOrder();
-  assert.equal(Object.keys(out).length, codes.length);
-  assert.equal(codes.every((code) => out[code].length === MAX_RANK), true);
+test('fillBlankRanks leaves a complete group unchanged (new ref, equal value)', () => {
+  const complete = ['South Korea', 'Mexico', 'Czech Rep.', 'South Africa'];
+  const out = fillBlankRanks({ A: complete }, () => 0);
+  assert.deepEqual(out.A, complete);
+  assert.notEqual(out.A, complete); // copied, not mutated
 });
 
-test('fillEmptyGroups returns an equal copy when every group is already set', () => {
-  const full = randomPicks(() => 0.5);
-  const out = fillEmptyGroups(full, () => 0);
-  assert.deepEqual(out, full); // nothing was empty, so nothing changed
+test('fillBlankRanks is deterministic with an injected RNG', () => {
+  const out = fillBlankRanks({ A: ['Mexico'] }, () => 0);
+  assert.deepEqual(out.A, ['Mexico', 'South Korea', 'Czech Rep.', 'South Africa']);
+});
+
+test('randomizeGroups re-rolls only the chosen groups and preserves the rest', () => {
+  const existing = { A: ['Mexico'], B: ['Canada', 'Qatar'] };
+  const out = randomizeGroups(existing, ['A'], () => 0);
+
+  assert.equal(out.A.length, MAX_RANK);         // A re-rolled to a full order
+  assert.deepEqual(out.B, ['Canada', 'Qatar']); // B untouched
+  assert.notEqual(out.B, existing.B);           // but copied, not the same ref
+});
+
+test('randomizeGroups with no codes returns an equal copy of existing picks', () => {
+  const existing = { A: ['Mexico', 'South Korea'], C: ['Brazil'] };
+  const out = randomizeGroups(existing, [], () => 0);
+  assert.deepEqual(out, existing);
+});
+
+test('randomizeGroups ignores unknown group codes', () => {
+  const out = randomizeGroups({ A: ['Mexico'] }, ['ZZ'], () => 0);
+  assert.deepEqual(out, { A: ['Mexico'] }); // nothing re-rolled, A preserved
 });
 
 test('group card shows a per-group clear control only when that group has picks', () => {

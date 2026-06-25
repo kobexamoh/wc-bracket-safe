@@ -805,6 +805,107 @@ header p {
   border-top: 1px solid var(--border);
 }
 
+/* "Select for me" chooser modal */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.select-modes {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.select-mode {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.select-mode:hover {
+  background: var(--light-gray);
+}
+
+.select-mode:has(input:checked) {
+  border-color: var(--ua-green);
+  background: #f0fdf4;
+}
+
+.select-mode input {
+  margin-top: 3px;
+  flex: 0 0 auto;
+}
+
+.select-mode span {
+  font-size: var(--fs-xs);
+  color: #374151;
+}
+
+.select-groups {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+}
+
+.select-groups legend {
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--navy);
+  padding: 0 4px;
+}
+
+.select-groups__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 6px 12px;
+}
+
+.select-groups__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  color: #374151;
+  cursor: pointer;
+}
+
+.select-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: var(--fs-xs);
+  color: #374151;
+}
+
+.select-remember input:disabled {
+  cursor: not-allowed;
+}
+
+.select-feedback {
+  margin-top: 12px;
+  font-size: var(--fs-2xs);
+  color: #6b7280;
+}
+
 /* ============================================
    Mobile (phones + small tablets) — kept LAST so these overrides win over the
    base rules above. Media queries don't add specificity, so source order breaks

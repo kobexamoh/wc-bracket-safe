@@ -10,7 +10,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { sanitizeEmail, redactEmail } from './sanitize.js';
-import { renderBracket, getGroupOrder, getGroupTeamNames, randomPicks, fillEmptyGroups, ADVANCE_COUNT } from './bracketData.js';
+import { renderBracket, getGroupOrder, getGroupTeamNames, randomPicks, fillBlankRanks, randomizeGroups, ADVANCE_COUNT } from './bracketData.js';
 import { loadBracketRow, savePicks } from './bracketStore.js';
 import { downloadBracketImage } from './exportImage.js';
 import { saveDraft, readDraft, clearDraft, shouldRestoreDraft } from './draftStore.js';
@@ -143,15 +143,22 @@ function showBracketSection() {
 }
 
 // ============================================
-// Modals (shared): the how-it-works onboarding overlay and the first-run
-// "Select for me" explainer share one accessible open/close + focus-trap.
+// Modals (shared): the how-it-works onboarding overlay and the "Select for me"
+// chooser share one accessible open/close + focus-trap implementation.
 // ============================================
 const helpModal = document.getElementById('helpModal');
 const helpBtn = document.getElementById('helpBtn');
 const selectModal = document.getElementById('selectModal');
-const selectFillBtn = document.getElementById('selectFillBtn');
+const selectApplyBtn = document.getElementById('selectApplyBtn');
+const selectGroupsFieldset = document.getElementById('selectGroupsFieldset');
+const selectGroupsGrid = document.getElementById('selectGroupsGrid');
+const selectRememberCheckbox = document.getElementById('selectRemember');
 const HELP_SEEN_KEY = 'wc-bracket:seen-help';
-const SELECT_HELP_SEEN_KEY = 'wc-bracket:seen-select-help';
+
+// "Select for me" chooser: the choice remembered for this signed-in session
+// (only 'blanks' or 'all'; the one-off 'selected' is never remembered). Cleared
+// on sign-out.
+let sessionSelectMode = null;
 
 // Only one modal is open at a time; track it for the shared Esc/Tab handler.
 let activeModal = null;
@@ -380,33 +387,115 @@ function handleDeselectAll() {
   afterPicksChanged();
 }
 
-// "Select for me" is non-destructive: it fills only the groups you haven't
-// started, so it can't clobber existing picks. With nothing left to fill it
-// offers a full random replace behind a confirm (our stand-in for an undo).
-function runSelectForMe() {
-  const emptyGroups = getGroupOrder().filter((code) => !(picks[code]?.length));
-  if (emptyGroups.length === 0) {
-    if (!window.confirm('Your bracket is already full. Replace every group with a new random bracket?')) return;
+// "Select for me" — non-destructive by default. An empty bracket has nothing to
+// protect, so just fill all 12; otherwise open the chooser (or apply the choice
+// remembered for this session) so the user controls exactly what gets touched.
+function handleSelectForMe() {
+  const hasPicks = getGroupOrder().some((code) => picks[code]?.length);
+  if (!hasPicks) {
     picks = randomPicks();
     afterPicksChanged();
-    showAlert('🎲 Replaced your bracket with a fresh random one — tweak it, then submit.', 'info');
+    showAlert('🎲 Filled all 12 groups for you — tweak, then submit.', 'info');
     return;
   }
-  picks = fillEmptyGroups(picks);
-  afterPicksChanged();
-  const n = emptyGroups.length;
-  showAlert(`🎲 Filled ${n} empty group${n === 1 ? '' : 's'} with a random valid order — tweak, then submit.`, 'info');
+  if (sessionSelectMode) {
+    applySelectForMe(sessionSelectMode);
+    return;
+  }
+  openSelectChooser();
 }
 
-// The first tap shows a one-time explainer (what it does + how to send
-// feedback); its primary button runs the fill. Every later tap fills directly.
-function handleSelectForMe() {
-  if (selectModal && !flagSeen(SELECT_HELP_SEEN_KEY)) {
-    markFlagSeen(SELECT_HELP_SEEN_KEY);
-    openModal(selectModal);
+// Run a chosen fill mode. `codes` only applies to 'selected'.
+function applySelectForMe(mode, codes = []) {
+  if (mode === 'all') {
+    picks = randomPicks();
+    afterPicksChanged();
+    showAlert('🎲 Replaced your whole bracket with a fresh random one — tweak, then submit.', 'info');
     return;
   }
-  runSelectForMe();
+  if (mode === 'selected') {
+    if (!codes.length) return;
+    picks = randomizeGroups(picks, codes);
+    afterPicksChanged();
+    const n = codes.length;
+    showAlert(`🎲 Re-rolled ${n} group${n === 1 ? '' : 's'} (${codes.join(', ')}) — tweak, then submit.`, 'info');
+    return;
+  }
+  // 'blanks' (default, safe): keep every placed team, fill only the empty ranks.
+  picks = fillBlankRanks(picks);
+  afterPicksChanged();
+  showAlert('🎲 Filled the blanks — the teams you already placed stayed put. Tweak, then submit.', 'info');
+}
+
+// --- "Select for me" chooser modal ---------------------------------------
+// Build the per-group checkboxes once (the group set is static).
+function buildSelectGroupChecks() {
+  if (!selectGroupsGrid || selectGroupsGrid.childElementCount) return;
+  for (const code of getGroupOrder()) {
+    const label = document.createElement('label');
+    label.className = 'select-groups__item';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = code;
+    const span = document.createElement('span');
+    span.textContent = `Group ${code}`;
+    label.append(cb, span);
+    selectGroupsGrid.append(label);
+  }
+}
+
+function selectedChooserMode() {
+  const checked = selectModal?.querySelector('input[name="selectMode"]:checked');
+  return checked ? checked.value : 'blanks';
+}
+
+function checkedGroupCodes() {
+  if (!selectGroupsGrid) return [];
+  return Array.from(selectGroupsGrid.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+}
+
+// Reflect the chosen radio: reveal the group checklist for 'selected' (and
+// disable "don't ask again" there, since a one-off selection can't be
+// remembered), label the Apply button, and disable Apply while 'selected' has
+// nothing ticked.
+function syncChooserState() {
+  const mode = selectedChooserMode();
+  const isSelected = mode === 'selected';
+  if (selectGroupsFieldset) selectGroupsFieldset.hidden = !isSelected;
+  if (selectRememberCheckbox) {
+    selectRememberCheckbox.disabled = isSelected;
+    if (isSelected) selectRememberCheckbox.checked = false;
+  }
+  if (selectApplyBtn) {
+    const labels = { blanks: 'Fill in the blanks', selected: 'Re-roll selected', all: 'Replace everything' };
+    selectApplyBtn.textContent = labels[mode] || 'Apply';
+    selectApplyBtn.disabled = isSelected && checkedGroupCodes().length === 0;
+  }
+}
+
+function openSelectChooser() {
+  if (!selectModal) {
+    applySelectForMe('blanks'); // modal missing (shouldn't happen) — safe default
+    return;
+  }
+  buildSelectGroupChecks();
+  const blanksRadio = selectModal.querySelector('input[name="selectMode"][value="blanks"]');
+  if (blanksRadio) blanksRadio.checked = true; // reset to the safe default each open
+  if (selectGroupsGrid) {
+    selectGroupsGrid.querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
+  }
+  if (selectRememberCheckbox) selectRememberCheckbox.checked = false;
+  syncChooserState();
+  openModal(selectModal);
+}
+
+function applyChooserAndClose() {
+  const mode = selectedChooserMode();
+  const codes = mode === 'selected' ? checkedGroupCodes() : [];
+  if (mode === 'selected' && !codes.length) return; // Apply is disabled anyway; guard
+  if (selectRememberCheckbox?.checked && mode !== 'selected') sessionSelectMode = mode;
+  closeModal(selectModal);
+  applySelectForMe(mode, codes);
 }
 
 // Download the current bracket as a branded PNG (html2canvas is lazy-loaded).
@@ -544,6 +633,7 @@ async function handleLogout() {
     if (nameInput) nameInput.value = '';
     loadedUserId = null;
     loadedUpdatedAt = null;
+    sessionSelectMode = null; // forget the remembered "Select for me" choice
     showAuthSection();
     showAlert('✅ Signed out', 'success');
   } catch (err) {
@@ -649,19 +739,19 @@ if (helpModal) {
   });
 }
 
-// First-run "Select for me" explainer: close controls dismiss it; the primary
-// button proceeds to actually fill the bracket.
+// "Select for me" chooser: radios re-sync the dialog (reveal group checklist,
+// toggle remember + Apply label), the checklist enables/disables Apply, close
+// controls dismiss, and Apply runs the chosen fill.
 if (selectModal) {
   selectModal.querySelectorAll('[data-close-select]').forEach((el) => {
     el.addEventListener('click', () => closeModal(selectModal));
   });
-}
-if (selectFillBtn) {
-  selectFillBtn.addEventListener('click', () => {
-    closeModal(selectModal);
-    runSelectForMe();
+  selectModal.querySelectorAll('input[name="selectMode"]').forEach((radio) => {
+    radio.addEventListener('change', syncChooserState);
   });
 }
+if (selectGroupsGrid) selectGroupsGrid.addEventListener('change', syncChooserState);
+if (selectApplyBtn) selectApplyBtn.addEventListener('click', applyChooserAndClose);
 
 // Flush a pending draft synchronously before the page is hidden or unloaded, so
 // a refresh inside the debounce window still persists the latest picks.
