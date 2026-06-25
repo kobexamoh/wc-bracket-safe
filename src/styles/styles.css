@@ -453,6 +453,17 @@ header p {
   font-size: var(--fs-xs);
 }
 
+/* Status that rides inside the sticky toolbar on large tablets (shown only there) */
+.toolbar-status {
+  display: none;
+}
+
+.toolbar-status .alert {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: var(--fs-xs);
+}
+
 .submit-bar-mobile__progress {
   min-width: 0;
   overflow: hidden;
@@ -854,5 +865,23 @@ header p {
   }
   .feedback-fab {
     bottom: 108px;
+  }
+}
+
+/* ============================================
+   Large tablets (769-1023px): single column but the toolbar is still the sticky
+   top bar, so the status rides INSIDE it (visible at the action point) and the
+   top-of-content rail is hidden. Phones use the bottom bar; desktop uses the rail.
+   ============================================ */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .toolbar-status {
+    display: block;
+    flex-basis: 100%;
+  }
+  .toolbar-status:empty {
+    display: none;
+  }
+  .side-messages {
+    display: none;
   }
 }
