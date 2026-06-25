@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getTournamentGroups, getGroupOrder, getGroupTeamNames, renderBracket, randomPicks, ADVANCE_COUNT } from '../src/js/bracketData.js';
+import { getTournamentGroups, getGroupOrder, getGroupTeamNames, renderBracket, randomPicks, fillEmptyGroups, MAX_RANK } from '../src/js/bracketData.js';
 
 test('tournament groups include all 12 groups and four teams each', () => {
   const groups = getTournamentGroups();
@@ -44,12 +44,12 @@ test('bracket marks the top two ranked teams as advancing with rank badges', () 
   assert.match(html, /rank-badge">2</);
 });
 
-test('randomPicks fills every group with exactly the advancing pair', () => {
+test('randomPicks fills every group with the full four-team order', () => {
   const picks = randomPicks();
   const codes = getGroupOrder();
 
   assert.equal(Object.keys(picks).length, codes.length);
-  assert.equal(codes.every((code) => picks[code].length === ADVANCE_COUNT), true);
+  assert.equal(codes.every((code) => picks[code].length === MAX_RANK), true);
 });
 
 test('randomPicks only uses real teams from each group, with no duplicates', () => {
@@ -64,9 +64,37 @@ test('randomPicks only uses real teams from each group, with no duplicates', () 
 });
 
 test('randomPicks is deterministic with an injected RNG', () => {
-  // Fisher-Yates with rng()=0 rotates the first two teams to the front.
+  // Fisher-Yates with rng()=0 walks each team to the front in turn, leaving a fixed order.
   const picks = randomPicks(() => 0);
-  assert.deepEqual(picks.A, ['South Africa', 'South Korea']);
+  assert.deepEqual(picks.A, ['South Africa', 'South Korea', 'Czech Rep.', 'Mexico']);
+});
+
+test('fillEmptyGroups leaves started groups untouched and fills empty ones to four', () => {
+  const started = ['Mexico', 'South Korea']; // Group A, user-picked
+  const out = fillEmptyGroups({ A: started }, () => 0);
+
+  assert.deepEqual(out.A, started);  // preserved exactly
+  assert.notEqual(out.A, started);   // but a copy, not the same array ref
+  const others = getGroupOrder().filter((code) => code !== 'A');
+  assert.equal(others.every((code) => out[code].length === MAX_RANK), true);
+});
+
+test('fillEmptyGroups treats a partially-filled group as started (does not overwrite)', () => {
+  const out = fillEmptyGroups({ A: ['Mexico'] }, () => 0);
+  assert.deepEqual(out.A, ['Mexico']);
+});
+
+test('fillEmptyGroups fills all 12 when nothing is set yet', () => {
+  const out = fillEmptyGroups({}, () => 0);
+  const codes = getGroupOrder();
+  assert.equal(Object.keys(out).length, codes.length);
+  assert.equal(codes.every((code) => out[code].length === MAX_RANK), true);
+});
+
+test('fillEmptyGroups returns an equal copy when every group is already set', () => {
+  const full = randomPicks(() => 0.5);
+  const out = fillEmptyGroups(full, () => 0);
+  assert.deepEqual(out, full); // nothing was empty, so nothing changed
 });
 
 test('group card shows a per-group clear control only when that group has picks', () => {

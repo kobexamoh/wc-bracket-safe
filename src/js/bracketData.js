@@ -39,21 +39,47 @@ export const ADVANCE_COUNT = 2;
 export const MAX_RANK = 4;
 
 /**
- * Build a random but valid bracket: the top 2 (1st & 2nd) advancing teams for
- * every group, in the same shape the app/store use. A RNG can be injected for
- * deterministic tests; defaults to Math.random.
+ * Shuffle one group's four teams (Fisher-Yates, injectable rng) and return the
+ * full predicted finishing order (1st -> 4th). Pure; takes a group code.
+ */
+function randomGroupOrder(code, rng = Math.random) {
+  const teams = getGroupTeamNames(code); // fresh array copy, safe to shuffle
+  for (let i = teams.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [teams[i], teams[j]] = [teams[j], teams[i]];
+  }
+  return teams.slice(0, MAX_RANK); // full order (all four), not just the advancing pair
+}
+
+/**
+ * Build a random but valid bracket: a full 1st->4th order for every group, in
+ * the same shape the app/store use. A RNG can be injected for deterministic
+ * tests; defaults to Math.random. Used by the "Select for me" full-replace path.
  */
 export function randomPicks(rng = Math.random) {
   const picks = {};
   for (const code of getGroupOrder()) {
-    const teams = getGroupTeamNames(code); // fresh array copy, safe to shuffle
-    for (let i = teams.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      [teams[i], teams[j]] = [teams[j], teams[i]];
-    }
-    picks[code] = teams.slice(0, ADVANCE_COUNT);
+    picks[code] = randomGroupOrder(code, rng);
   }
   return picks;
+}
+
+/**
+ * Non-destructive fill for "Select for me": keep any group the user has already
+ * started (>=1 pick) exactly as-is (defensive-copied), and fill every empty
+ * group with a fresh full random order. Returns a NEW object and never mutates
+ * the input. When no group is empty the result equals the input (the caller
+ * uses that to offer a full-replace confirm instead).
+ */
+export function fillEmptyGroups(existing = {}, rng = Math.random) {
+  const next = {};
+  for (const code of getGroupOrder()) {
+    const current = existing[code];
+    next[code] = Array.isArray(current) && current.length
+      ? [...current]
+      : randomGroupOrder(code, rng);
+  }
+  return next;
 }
 
 /**

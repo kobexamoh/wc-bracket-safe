@@ -10,7 +10,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { sanitizeEmail, redactEmail } from './sanitize.js';
-import { renderBracket, getGroupOrder, getGroupTeamNames, randomPicks, ADVANCE_COUNT } from './bracketData.js';
+import { renderBracket, getGroupOrder, getGroupTeamNames, randomPicks, fillEmptyGroups, ADVANCE_COUNT } from './bracketData.js';
 import { loadBracketRow, savePicks } from './bracketStore.js';
 import { downloadBracketImage } from './exportImage.js';
 import { saveDraft, readDraft, clearDraft, shouldRestoreDraft } from './draftStore.js';
@@ -143,28 +143,36 @@ function showBracketSection() {
 }
 
 // ============================================
-// How-it-works modal (onboarding overlay)
+// Modals (shared): the how-it-works onboarding overlay and the first-run
+// "Select for me" explainer share one accessible open/close + focus-trap.
 // ============================================
 const helpModal = document.getElementById('helpModal');
 const helpBtn = document.getElementById('helpBtn');
-const helpDialog = helpModal ? helpModal.querySelector('.modal__dialog') : null;
+const selectModal = document.getElementById('selectModal');
+const selectFillBtn = document.getElementById('selectFillBtn');
 const HELP_SEEN_KEY = 'wc-bracket:seen-help';
-let lastFocusedBeforeHelp = null;
+const SELECT_HELP_SEEN_KEY = 'wc-bracket:seen-select-help';
 
-// Seen-once flag lives in the same guarded localStorage handle as the draft.
-function helpAlreadySeen() {
+// Only one modal is open at a time; track it for the shared Esc/Tab handler.
+let activeModal = null;
+let activeModalDialog = null;
+let lastFocusedBeforeModal = null;
+
+// Generic seen-once flags live in the same guarded localStorage handle as the
+// draft (private mode can throw on access).
+function flagSeen(key) {
   if (!draftStorage) return false;
   try {
-    return draftStorage.getItem(HELP_SEEN_KEY) === '1';
+    return draftStorage.getItem(key) === '1';
   } catch {
     return false;
   }
 }
 
-function markHelpSeen() {
+function markFlagSeen(key) {
   if (!draftStorage) return;
   try {
-    draftStorage.setItem(HELP_SEEN_KEY, '1');
+    draftStorage.setItem(key, '1');
   } catch {
     /* private mode / quota - ignore */
   }
@@ -179,24 +187,25 @@ function getFocusable(container) {
   ).filter((el) => el.offsetParent !== null);
 }
 
-// Esc closes; Tab cycles within the dialog so focus can't slip behind it.
-function onHelpKeydown(e) {
+// Esc closes the open modal; Tab cycles within its dialog so focus can't slip behind.
+function onModalKeydown(e) {
+  if (!activeModal) return;
   if (e.key === 'Escape') {
     e.preventDefault();
-    closeHelp();
+    closeModal(activeModal);
     return;
   }
-  if (e.key !== 'Tab' || !helpDialog) return;
-  const focusable = getFocusable(helpDialog);
+  if (e.key !== 'Tab' || !activeModalDialog) return;
+  const focusable = getFocusable(activeModalDialog);
   if (!focusable.length) {
     e.preventDefault();
-    helpDialog.focus();
+    activeModalDialog.focus();
     return;
   }
   const first = focusable[0];
   const last = focusable[focusable.length - 1];
   const active = document.activeElement;
-  if (e.shiftKey && (active === first || active === helpDialog)) {
+  if (e.shiftKey && (active === first || active === activeModalDialog)) {
     e.preventDefault();
     last.focus();
   } else if (!e.shiftKey && active === last) {
@@ -205,31 +214,36 @@ function onHelpKeydown(e) {
   }
 }
 
-function openHelp() {
-  if (!helpModal) return;
-  lastFocusedBeforeHelp = document.activeElement;
-  helpModal.hidden = false;
+function openModal(modalEl) {
+  if (!modalEl) return;
+  lastFocusedBeforeModal = document.activeElement;
+  activeModal = modalEl;
+  activeModalDialog = modalEl.querySelector('.modal__dialog');
+  modalEl.hidden = false;
   document.body.style.overflow = 'hidden'; // lock background scroll
-  document.addEventListener('keydown', onHelpKeydown, true);
-  if (helpDialog) helpDialog.focus(); // move focus in for Esc + screen readers
+  document.addEventListener('keydown', onModalKeydown, true);
+  if (activeModalDialog) activeModalDialog.focus(); // move focus in for Esc + screen readers
 }
 
-function closeHelp() {
-  if (!helpModal || helpModal.hidden) return;
-  helpModal.hidden = true;
+function closeModal(modalEl) {
+  if (!modalEl || modalEl.hidden) return;
+  modalEl.hidden = true;
   document.body.style.overflow = '';
-  document.removeEventListener('keydown', onHelpKeydown, true);
-  if (lastFocusedBeforeHelp && typeof lastFocusedBeforeHelp.focus === 'function') {
-    lastFocusedBeforeHelp.focus(); // restore focus to the trigger
+  document.removeEventListener('keydown', onModalKeydown, true);
+  if (lastFocusedBeforeModal && typeof lastFocusedBeforeModal.focus === 'function') {
+    lastFocusedBeforeModal.focus(); // restore focus to the trigger
   }
-  lastFocusedBeforeHelp = null;
+  lastFocusedBeforeModal = null;
+  activeModal = null;
+  activeModalDialog = null;
 }
 
-// Auto-open the explainer once per browser, the first time the bracket appears.
+// Auto-open the how-it-works explainer once per browser, the first time the
+// bracket appears.
 function maybeAutoOpenHelp() {
-  if (!helpModal || helpAlreadySeen()) return;
-  markHelpSeen();
-  openHelp();
+  if (!helpModal || flagSeen(HELP_SEEN_KEY)) return;
+  markFlagSeen(HELP_SEEN_KEY);
+  openModal(helpModal);
 }
 
 // ============================================
@@ -366,11 +380,33 @@ function handleDeselectAll() {
   afterPicksChanged();
 }
 
-// Fill a random but valid bracket (2 advancing per group); user can tweak or save.
-function handleSelectForMe() {
-  picks = randomPicks();
+// "Select for me" is non-destructive: it fills only the groups you haven't
+// started, so it can't clobber existing picks. With nothing left to fill it
+// offers a full random replace behind a confirm (our stand-in for an undo).
+function runSelectForMe() {
+  const emptyGroups = getGroupOrder().filter((code) => !(picks[code]?.length));
+  if (emptyGroups.length === 0) {
+    if (!window.confirm('Your bracket is already full. Replace every group with a new random bracket?')) return;
+    picks = randomPicks();
+    afterPicksChanged();
+    showAlert('🎲 Replaced your bracket with a fresh random one — tweak it, then submit.', 'info');
+    return;
+  }
+  picks = fillEmptyGroups(picks);
   afterPicksChanged();
-  showAlert('🎲 Picked a random bracket for you — tweak it, then submit.', 'info');
+  const n = emptyGroups.length;
+  showAlert(`🎲 Filled ${n} empty group${n === 1 ? '' : 's'} with a random valid order — tweak, then submit.`, 'info');
+}
+
+// The first tap shows a one-time explainer (what it does + how to send
+// feedback); its primary button runs the fill. Every later tap fills directly.
+function handleSelectForMe() {
+  if (selectModal && !flagSeen(SELECT_HELP_SEEN_KEY)) {
+    markFlagSeen(SELECT_HELP_SEEN_KEY);
+    openModal(selectModal);
+    return;
+  }
+  runSelectForMe();
 }
 
 // Download the current bracket as a branded PNG (html2canvas is lazy-loaded).
@@ -606,10 +642,24 @@ if (nameInput) nameInput.addEventListener('input', () => {
 if (bracketEl) bracketEl.addEventListener('click', onBracketClick);
 
 // How-it-works modal: open from the header button; close via ×, "Got it", or backdrop.
-if (helpBtn) helpBtn.addEventListener('click', openHelp);
+if (helpBtn) helpBtn.addEventListener('click', () => openModal(helpModal));
 if (helpModal) {
   helpModal.querySelectorAll('[data-close-help]').forEach((el) => {
-    el.addEventListener('click', closeHelp);
+    el.addEventListener('click', () => closeModal(helpModal));
+  });
+}
+
+// First-run "Select for me" explainer: close controls dismiss it; the primary
+// button proceeds to actually fill the bracket.
+if (selectModal) {
+  selectModal.querySelectorAll('[data-close-select]').forEach((el) => {
+    el.addEventListener('click', () => closeModal(selectModal));
+  });
+}
+if (selectFillBtn) {
+  selectFillBtn.addEventListener('click', () => {
+    closeModal(selectModal);
+    runSelectForMe();
   });
 }
 

@@ -67,7 +67,7 @@
                         </div>
                         <div class="bracket-actions">
                             <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
-                            <button id="randomBtn" type="button" class="btn btn-ghost" title="Fill a random valid bracket you can then tweak">Select for me</button>
+                            <button id="randomBtn" type="button" class="btn btn-ghost" title="Randomly fill the groups you haven't set yet (ranks all four) — your existing picks stay put">Select for me</button>
                             <button id="deselectBtn" type="button" class="btn btn-ghost" title="Clear every pick in all groups">Deselect all</button>
                             <button id="exportBtn" type="button" class="btn btn-ghost" title="Download your bracket as an image to share">Screenshot bracket (PNG)</button>
                             <button id="saveBtn" type="button" class="btn btn-primary" title="Submit your bracket (needs at least 2 picks in every group)">Submit bracket</button>
@@ -132,6 +132,28 @@
             </div>
             <div class="modal__foot">
                 <button type="button" class="btn btn-primary" data-close-help>Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- First-run "Select for me" explainer: what the button does + how to send feedback -->
+    <div id="selectModal" class="modal" hidden>
+        <div class="modal__backdrop" data-close-select></div>
+        <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="selectTitle" tabindex="-1">
+            <div class="modal__head">
+                <h2 id="selectTitle">About "Select for me"</h2>
+                <button type="button" class="modal__close" data-close-select aria-label="Close">&times;</button>
+            </div>
+            <div class="modal__body">
+                <p class="modal__lead">A quick heads-up the first time you use it.</p>
+                <p><strong>Select for me</strong> fills in only the groups you haven't set yet, with a random but valid order (all four places) — so it never overwrites picks you've already made.</p>
+                <p>If every group is already set, it asks first before replacing your whole bracket with a new random one.</p>
+                <h3>Not how you'd expect it to work?</h3>
+                <p>Tell me — use the <strong>Report a bug</strong> button in the bottom-right corner to send your thoughts on how it should behave. If I like the cut of your jib, I'll tweak it and maybe even buy you a donut as a thank you.</p>
+            </div>
+            <div class="modal__foot">
+                <button type="button" class="btn btn-ghost" data-close-select>Maybe later</button>
+                <button id="selectFillBtn" type="button" class="btn btn-primary">Fill it in for me</button>
             </div>
         </div>
     </div>
