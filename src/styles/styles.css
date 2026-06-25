@@ -923,16 +923,35 @@ header p {
   .header-user {
     max-width: 100%;
   }
-  /* The toolbar wraps to several rows on phones; keep it in normal flow (not
-     sticky) so it never eats the small viewport */
+  /* Keep the action bar reachable while scrolling: a compact sticky bar holding
+     just the secondary actions. Submit, progress, and status live in the fixed
+     bottom bar, so their in-toolbar duplicates are hidden to keep this row tight.
+     The masthead scrolls away, so this is the only sticky layer (no stacking). */
   .bracket-toolbar {
-    position: static;
+    position: sticky;
+    top: 0;
+    gap: 8px;
+    padding: 8px 10px;
+    margin-bottom: 14px;
+  }
+  .bracket-toolbar .bracket-progress,
+  .bracket-toolbar .save-status {
+    display: none;
+  }
+  .bracket-actions {
+    flex: 1 1 100%;
+    justify-content: center;
+    gap: 8px;
+  }
+  .bracket-actions .btn-ghost {
+    padding: 7px 10px;
+    font-size: var(--fs-2xs);
   }
   /* The bottom bar carries Submit on phones; hide the duplicate in the toolbar */
   #saveBtn {
     display: none;
   }
-  /* With the toolbar in-flow, a fixed bottom bar keeps Submit (and status) one tap away */
+  /* The toolbar is the sticky top bar; the fixed bottom bar keeps Submit (and status) one tap away */
   .submit-bar-mobile {
     display: flex;
     flex-direction: column;
