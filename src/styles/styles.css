@@ -442,6 +442,17 @@ header p {
   display: none;
 }
 
+/* Status (errors/success) rides inside the bar on mobile; collapses when empty */
+.submit-bar-mobile__status:empty {
+  display: none;
+}
+
+.submit-bar-mobile__status .alert {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: var(--fs-xs);
+}
+
 .submit-bar-mobile__progress {
   min-width: 0;
   overflow: hidden;
@@ -783,12 +794,12 @@ header p {
 }
 
 /* ============================================
-   Mobile (phones) — kept LAST so these overrides win over the base rules above.
-   Media queries don't add specificity, so source order breaks the tie; placing
-   this block earlier let later base rules (e.g. .submit-bar-mobile display:none,
-   .bracket-toolbar position:sticky) override it.
+   Mobile (phones + small tablets) — kept LAST so these overrides win over the
+   base rules above. Media queries don't add specificity, so source order breaks
+   the tie; placing this block earlier let later base rules (e.g.
+   .submit-bar-mobile display:none, .bracket-toolbar position:sticky) override it.
    ============================================ */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   /* Compact masthead: the account row wraps below the title; tame the display title */
   header {
     padding: 12px 16px;
@@ -808,30 +819,40 @@ header p {
   #saveBtn {
     display: none;
   }
-  /* With the toolbar in-flow, a fixed bottom bar keeps Submit one tap away */
+  /* With the toolbar in-flow, a fixed bottom bar keeps Submit (and status) one tap away */
   .submit-bar-mobile {
     display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 150;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
     padding: 10px 14px;
     background: #ffffff;
     border-top: 1px solid var(--border);
     box-shadow: 0 -4px 14px rgba(15, 23, 42, 0.10);
   }
+  .submit-bar-mobile__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
   .submit-bar-mobile__btn {
     flex: 0 0 auto;
   }
-  /* Keep the last group above the fixed bar, and lift the feedback FAB over it */
+  /* Status now rides in the bottom bar, so hide the top-of-page rail copy here */
+  .side-messages {
+    display: none;
+  }
+  /* Keep the last group above the fixed bar, and lift the feedback FAB clear of it */
   body {
-    padding-bottom: 76px;
+    padding-bottom: 84px;
   }
   .feedback-fab {
-    bottom: 84px;
+    bottom: 108px;
   }
 }

@@ -77,14 +77,20 @@ function emailLocalPart(email) {
 const ALERT_DEFAULT_MS = 6000;
 let alertTimer = null;
 
-function alertTarget() {
+// Containers a message can live in: the sign-in screen, the desktop rail, and
+// the mobile bottom-bar status. CSS shows whichever fits the current breakpoint.
+const ALERT_CONTAINER_IDS = ['alerts', 'authAlerts', 'alertsMobile'];
+
+function alertTargets() {
   const section = document.getElementById('bracketSection');
   const onBracket = section && section.style.display !== 'none';
-  return (
-    (onBracket ? document.getElementById('alerts') : document.getElementById('authAlerts')) ||
-    document.getElementById('alerts') ||
-    document.getElementById('authAlerts')
-  );
+  // On the bracket screen, mirror into the rail (desktop) AND the bottom-bar
+  // status (mobile); CSS hides whichever doesn't apply at the current width.
+  const ids = onBracket ? ['alerts', 'alertsMobile'] : ['authAlerts'];
+  const targets = ids.map((id) => document.getElementById(id)).filter(Boolean);
+  if (targets.length) return targets;
+  // Fallback so a message is never silently dropped.
+  return [document.getElementById('alerts') || document.getElementById('authAlerts')].filter(Boolean);
 }
 
 function clearAllAlerts() {
@@ -92,29 +98,31 @@ function clearAllAlerts() {
     clearTimeout(alertTimer);
     alertTimer = null;
   }
-  ['alerts', 'authAlerts'].forEach((id) => {
+  ALERT_CONTAINER_IDS.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.replaceChildren();
   });
 }
 
 function showAlert(message, type = 'info', options = {}) {
-  const target = alertTarget();
-  if (!target) return;
-  // Clear any current message (on either screen) so only one ever shows.
+  const targets = alertTargets();
+  if (!targets.length) return;
+  // Clear any current message everywhere so only one ever shows.
   clearAllAlerts();
 
-  const alertDiv = document.createElement('div');
-  alertDiv.className = `alert ${type}`;
-  alertDiv.textContent = message;
-  target.replaceChildren(alertDiv);
+  targets.forEach((target) => {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert ${type}`;
+    alertDiv.textContent = message;
+    target.replaceChildren(alertDiv);
+  });
 
   // Errors stay until the next action replaces them; everything else fades out.
   const persist = options.persist ?? (type === 'error');
   if (!persist) {
     const ms = options.duration ?? ALERT_DEFAULT_MS;
     alertTimer = setTimeout(() => {
-      if (target.firstChild === alertDiv) target.replaceChildren();
+      targets.forEach((target) => target.replaceChildren());
     }, ms);
   }
 }
