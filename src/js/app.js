@@ -10,7 +10,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { sanitizeEmail, redactEmail } from './sanitize.js';
-import { renderBracket, getGroupOrder, getGroupTeamNames, randomPicks, ADVANCE_COUNT } from './bracketData.js';
+import { renderBracket, getGroupOrder, getGroupTeamNames, randomPicks, fillBlankRanks, randomizeGroups, ADVANCE_COUNT } from './bracketData.js';
 import { loadBracketRow, savePicks } from './bracketStore.js';
 import { downloadBracketImage } from './exportImage.js';
 import { saveDraft, readDraft, clearDraft, shouldRestoreDraft } from './draftStore.js';
@@ -143,28 +143,43 @@ function showBracketSection() {
 }
 
 // ============================================
-// How-it-works modal (onboarding overlay)
+// Modals (shared): the how-it-works onboarding overlay and the "Select for me"
+// chooser share one accessible open/close + focus-trap implementation.
 // ============================================
 const helpModal = document.getElementById('helpModal');
 const helpBtn = document.getElementById('helpBtn');
-const helpDialog = helpModal ? helpModal.querySelector('.modal__dialog') : null;
+const selectModal = document.getElementById('selectModal');
+const selectApplyBtn = document.getElementById('selectApplyBtn');
+const selectGroupsFieldset = document.getElementById('selectGroupsFieldset');
+const selectGroupsGrid = document.getElementById('selectGroupsGrid');
+const selectRememberCheckbox = document.getElementById('selectRemember');
 const HELP_SEEN_KEY = 'wc-bracket:seen-help';
-let lastFocusedBeforeHelp = null;
 
-// Seen-once flag lives in the same guarded localStorage handle as the draft.
-function helpAlreadySeen() {
+// "Select for me" chooser: the choice remembered for this signed-in session
+// (only 'blanks' or 'all'; the one-off 'selected' is never remembered). Cleared
+// on sign-out.
+let sessionSelectMode = null;
+
+// Only one modal is open at a time; track it for the shared Esc/Tab handler.
+let activeModal = null;
+let activeModalDialog = null;
+let lastFocusedBeforeModal = null;
+
+// Generic seen-once flags live in the same guarded localStorage handle as the
+// draft (private mode can throw on access).
+function flagSeen(key) {
   if (!draftStorage) return false;
   try {
-    return draftStorage.getItem(HELP_SEEN_KEY) === '1';
+    return draftStorage.getItem(key) === '1';
   } catch {
     return false;
   }
 }
 
-function markHelpSeen() {
+function markFlagSeen(key) {
   if (!draftStorage) return;
   try {
-    draftStorage.setItem(HELP_SEEN_KEY, '1');
+    draftStorage.setItem(key, '1');
   } catch {
     /* private mode / quota - ignore */
   }
@@ -179,24 +194,25 @@ function getFocusable(container) {
   ).filter((el) => el.offsetParent !== null);
 }
 
-// Esc closes; Tab cycles within the dialog so focus can't slip behind it.
-function onHelpKeydown(e) {
+// Esc closes the open modal; Tab cycles within its dialog so focus can't slip behind.
+function onModalKeydown(e) {
+  if (!activeModal) return;
   if (e.key === 'Escape') {
     e.preventDefault();
-    closeHelp();
+    closeModal(activeModal);
     return;
   }
-  if (e.key !== 'Tab' || !helpDialog) return;
-  const focusable = getFocusable(helpDialog);
+  if (e.key !== 'Tab' || !activeModalDialog) return;
+  const focusable = getFocusable(activeModalDialog);
   if (!focusable.length) {
     e.preventDefault();
-    helpDialog.focus();
+    activeModalDialog.focus();
     return;
   }
   const first = focusable[0];
   const last = focusable[focusable.length - 1];
   const active = document.activeElement;
-  if (e.shiftKey && (active === first || active === helpDialog)) {
+  if (e.shiftKey && (active === first || active === activeModalDialog)) {
     e.preventDefault();
     last.focus();
   } else if (!e.shiftKey && active === last) {
@@ -205,31 +221,36 @@ function onHelpKeydown(e) {
   }
 }
 
-function openHelp() {
-  if (!helpModal) return;
-  lastFocusedBeforeHelp = document.activeElement;
-  helpModal.hidden = false;
+function openModal(modalEl) {
+  if (!modalEl) return;
+  lastFocusedBeforeModal = document.activeElement;
+  activeModal = modalEl;
+  activeModalDialog = modalEl.querySelector('.modal__dialog');
+  modalEl.hidden = false;
   document.body.style.overflow = 'hidden'; // lock background scroll
-  document.addEventListener('keydown', onHelpKeydown, true);
-  if (helpDialog) helpDialog.focus(); // move focus in for Esc + screen readers
+  document.addEventListener('keydown', onModalKeydown, true);
+  if (activeModalDialog) activeModalDialog.focus(); // move focus in for Esc + screen readers
 }
 
-function closeHelp() {
-  if (!helpModal || helpModal.hidden) return;
-  helpModal.hidden = true;
+function closeModal(modalEl) {
+  if (!modalEl || modalEl.hidden) return;
+  modalEl.hidden = true;
   document.body.style.overflow = '';
-  document.removeEventListener('keydown', onHelpKeydown, true);
-  if (lastFocusedBeforeHelp && typeof lastFocusedBeforeHelp.focus === 'function') {
-    lastFocusedBeforeHelp.focus(); // restore focus to the trigger
+  document.removeEventListener('keydown', onModalKeydown, true);
+  if (lastFocusedBeforeModal && typeof lastFocusedBeforeModal.focus === 'function') {
+    lastFocusedBeforeModal.focus(); // restore focus to the trigger
   }
-  lastFocusedBeforeHelp = null;
+  lastFocusedBeforeModal = null;
+  activeModal = null;
+  activeModalDialog = null;
 }
 
-// Auto-open the explainer once per browser, the first time the bracket appears.
+// Auto-open the how-it-works explainer once per browser, the first time the
+// bracket appears.
 function maybeAutoOpenHelp() {
-  if (!helpModal || helpAlreadySeen()) return;
-  markHelpSeen();
-  openHelp();
+  if (!helpModal || flagSeen(HELP_SEEN_KEY)) return;
+  markFlagSeen(HELP_SEEN_KEY);
+  openModal(helpModal);
 }
 
 // ============================================
@@ -366,11 +387,115 @@ function handleDeselectAll() {
   afterPicksChanged();
 }
 
-// Fill a random but valid bracket (2 advancing per group); user can tweak or save.
+// "Select for me" — non-destructive by default. An empty bracket has nothing to
+// protect, so just fill all 12; otherwise open the chooser (or apply the choice
+// remembered for this session) so the user controls exactly what gets touched.
 function handleSelectForMe() {
-  picks = randomPicks();
+  const hasPicks = getGroupOrder().some((code) => picks[code]?.length);
+  if (!hasPicks) {
+    picks = randomPicks();
+    afterPicksChanged();
+    showAlert('🎲 Filled all 12 groups for you — tweak, then submit.', 'info');
+    return;
+  }
+  if (sessionSelectMode) {
+    applySelectForMe(sessionSelectMode);
+    return;
+  }
+  openSelectChooser();
+}
+
+// Run a chosen fill mode. `codes` only applies to 'selected'.
+function applySelectForMe(mode, codes = []) {
+  if (mode === 'all') {
+    picks = randomPicks();
+    afterPicksChanged();
+    showAlert('🎲 Replaced your whole bracket with a fresh random one — tweak, then submit.', 'info');
+    return;
+  }
+  if (mode === 'selected') {
+    if (!codes.length) return;
+    picks = randomizeGroups(picks, codes);
+    afterPicksChanged();
+    const n = codes.length;
+    showAlert(`🎲 Re-rolled ${n} group${n === 1 ? '' : 's'} (${codes.join(', ')}) — tweak, then submit.`, 'info');
+    return;
+  }
+  // 'blanks' (default, safe): keep every placed team, fill only the empty ranks.
+  picks = fillBlankRanks(picks);
   afterPicksChanged();
-  showAlert('🎲 Picked a random bracket for you — tweak it, then submit.', 'info');
+  showAlert('🎲 Filled the blanks — the teams you already placed stayed put. Tweak, then submit.', 'info');
+}
+
+// --- "Select for me" chooser modal ---------------------------------------
+// Build the per-group checkboxes once (the group set is static).
+function buildSelectGroupChecks() {
+  if (!selectGroupsGrid || selectGroupsGrid.childElementCount) return;
+  for (const code of getGroupOrder()) {
+    const label = document.createElement('label');
+    label.className = 'select-groups__item';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = code;
+    const span = document.createElement('span');
+    span.textContent = `Group ${code}`;
+    label.append(cb, span);
+    selectGroupsGrid.append(label);
+  }
+}
+
+function selectedChooserMode() {
+  const checked = selectModal?.querySelector('input[name="selectMode"]:checked');
+  return checked ? checked.value : 'blanks';
+}
+
+function checkedGroupCodes() {
+  if (!selectGroupsGrid) return [];
+  return Array.from(selectGroupsGrid.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+}
+
+// Reflect the chosen radio: reveal the group checklist for 'selected' (and
+// disable "don't ask again" there, since a one-off selection can't be
+// remembered), label the Apply button, and disable Apply while 'selected' has
+// nothing ticked.
+function syncChooserState() {
+  const mode = selectedChooserMode();
+  const isSelected = mode === 'selected';
+  if (selectGroupsFieldset) selectGroupsFieldset.hidden = !isSelected;
+  if (selectRememberCheckbox) {
+    selectRememberCheckbox.disabled = isSelected;
+    if (isSelected) selectRememberCheckbox.checked = false;
+  }
+  if (selectApplyBtn) {
+    const labels = { blanks: 'Fill in the blanks', selected: 'Re-roll selected', all: 'Replace everything' };
+    selectApplyBtn.textContent = labels[mode] || 'Apply';
+    selectApplyBtn.disabled = isSelected && checkedGroupCodes().length === 0;
+  }
+}
+
+function openSelectChooser() {
+  if (!selectModal) {
+    applySelectForMe('blanks'); // modal missing (shouldn't happen) — safe default
+    return;
+  }
+  buildSelectGroupChecks();
+  const blanksRadio = selectModal.querySelector('input[name="selectMode"][value="blanks"]');
+  if (blanksRadio) blanksRadio.checked = true; // reset to the safe default each open
+  if (selectGroupsGrid) {
+    selectGroupsGrid.querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
+  }
+  if (selectRememberCheckbox) selectRememberCheckbox.checked = false;
+  syncChooserState();
+  openModal(selectModal);
+}
+
+function applyChooserAndClose() {
+  const mode = selectedChooserMode();
+  const codes = mode === 'selected' ? checkedGroupCodes() : [];
+  if (mode === 'selected' && !codes.length) return; // Apply is disabled anyway; guard
+  if (selectRememberCheckbox?.checked && mode !== 'selected') sessionSelectMode = mode;
+  closeModal(selectModal);
+  applySelectForMe(mode, codes);
 }
 
 // Download the current bracket as a branded PNG (html2canvas is lazy-loaded).
@@ -508,6 +633,7 @@ async function handleLogout() {
     if (nameInput) nameInput.value = '';
     loadedUserId = null;
     loadedUpdatedAt = null;
+    sessionSelectMode = null; // forget the remembered "Select for me" choice
     showAuthSection();
     showAlert('✅ Signed out', 'success');
   } catch (err) {
@@ -606,12 +732,26 @@ if (nameInput) nameInput.addEventListener('input', () => {
 if (bracketEl) bracketEl.addEventListener('click', onBracketClick);
 
 // How-it-works modal: open from the header button; close via ×, "Got it", or backdrop.
-if (helpBtn) helpBtn.addEventListener('click', openHelp);
+if (helpBtn) helpBtn.addEventListener('click', () => openModal(helpModal));
 if (helpModal) {
   helpModal.querySelectorAll('[data-close-help]').forEach((el) => {
-    el.addEventListener('click', closeHelp);
+    el.addEventListener('click', () => closeModal(helpModal));
   });
 }
+
+// "Select for me" chooser: radios re-sync the dialog (reveal group checklist,
+// toggle remember + Apply label), the checklist enables/disables Apply, close
+// controls dismiss, and Apply runs the chosen fill.
+if (selectModal) {
+  selectModal.querySelectorAll('[data-close-select]').forEach((el) => {
+    el.addEventListener('click', () => closeModal(selectModal));
+  });
+  selectModal.querySelectorAll('input[name="selectMode"]').forEach((radio) => {
+    radio.addEventListener('change', syncChooserState);
+  });
+}
+if (selectGroupsGrid) selectGroupsGrid.addEventListener('change', syncChooserState);
+if (selectApplyBtn) selectApplyBtn.addEventListener('click', applyChooserAndClose);
 
 // Flush a pending draft synchronously before the page is hidden or unloaded, so
 // a refresh inside the debounce window still persists the latest picks.

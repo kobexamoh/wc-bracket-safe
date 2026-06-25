@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getTournamentGroups, getGroupOrder, getGroupTeamNames, renderBracket, randomPicks, ADVANCE_COUNT } from '../src/js/bracketData.js';
+import { getTournamentGroups, getGroupOrder, getGroupTeamNames, renderBracket, randomPicks, fillBlankRanks, randomizeGroups, MAX_RANK } from '../src/js/bracketData.js';
 
 test('tournament groups include all 12 groups and four teams each', () => {
   const groups = getTournamentGroups();
@@ -44,12 +44,12 @@ test('bracket marks the top two ranked teams as advancing with rank badges', () 
   assert.match(html, /rank-badge">2</);
 });
 
-test('randomPicks fills every group with exactly the advancing pair', () => {
+test('randomPicks fills every group with the full four-team order', () => {
   const picks = randomPicks();
   const codes = getGroupOrder();
 
   assert.equal(Object.keys(picks).length, codes.length);
-  assert.equal(codes.every((code) => picks[code].length === ADVANCE_COUNT), true);
+  assert.equal(codes.every((code) => picks[code].length === MAX_RANK), true);
 });
 
 test('randomPicks only uses real teams from each group, with no duplicates', () => {
@@ -64,9 +64,56 @@ test('randomPicks only uses real teams from each group, with no duplicates', () 
 });
 
 test('randomPicks is deterministic with an injected RNG', () => {
-  // Fisher-Yates with rng()=0 rotates the first two teams to the front.
+  // Fisher-Yates with rng()=0 walks each team to the front in turn, leaving a fixed order.
   const picks = randomPicks(() => 0);
-  assert.deepEqual(picks.A, ['South Africa', 'South Korea']);
+  assert.deepEqual(picks.A, ['South Africa', 'South Korea', 'Czech Rep.', 'Mexico']);
+});
+
+test('fillBlankRanks keeps placed teams and completes the group to four', () => {
+  // Group A teams: Mexico, South Africa, South Korea, Czech Rep.
+  const out = fillBlankRanks({ A: ['Mexico'] }, () => 0);
+
+  assert.equal(out.A[0], 'Mexico');             // placed team keeps 1st
+  assert.equal(out.A.length, MAX_RANK);         // completed to four
+  assert.equal(new Set(out.A).size, MAX_RANK);  // no duplicates
+  assert.equal(out.A.every((t) => getGroupTeamNames('A').includes(t)), true);
+});
+
+test('fillBlankRanks fills a fully-empty group with all four', () => {
+  const out = fillBlankRanks({}, () => 0);
+  assert.equal(getGroupOrder().every((code) => out[code].length === MAX_RANK), true);
+});
+
+test('fillBlankRanks leaves a complete group unchanged (new ref, equal value)', () => {
+  const complete = ['South Korea', 'Mexico', 'Czech Rep.', 'South Africa'];
+  const out = fillBlankRanks({ A: complete }, () => 0);
+  assert.deepEqual(out.A, complete);
+  assert.notEqual(out.A, complete); // copied, not mutated
+});
+
+test('fillBlankRanks is deterministic with an injected RNG', () => {
+  const out = fillBlankRanks({ A: ['Mexico'] }, () => 0);
+  assert.deepEqual(out.A, ['Mexico', 'South Korea', 'Czech Rep.', 'South Africa']);
+});
+
+test('randomizeGroups re-rolls only the chosen groups and preserves the rest', () => {
+  const existing = { A: ['Mexico'], B: ['Canada', 'Qatar'] };
+  const out = randomizeGroups(existing, ['A'], () => 0);
+
+  assert.equal(out.A.length, MAX_RANK);         // A re-rolled to a full order
+  assert.deepEqual(out.B, ['Canada', 'Qatar']); // B untouched
+  assert.notEqual(out.B, existing.B);           // but copied, not the same ref
+});
+
+test('randomizeGroups with no codes returns an equal copy of existing picks', () => {
+  const existing = { A: ['Mexico', 'South Korea'], C: ['Brazil'] };
+  const out = randomizeGroups(existing, [], () => 0);
+  assert.deepEqual(out, existing);
+});
+
+test('randomizeGroups ignores unknown group codes', () => {
+  const out = randomizeGroups({ A: ['Mexico'] }, ['ZZ'], () => 0);
+  assert.deepEqual(out, { A: ['Mexico'] }); // nothing re-rolled, A preserved
 });
 
 test('group card shows a per-group clear control only when that group has picks', () => {
