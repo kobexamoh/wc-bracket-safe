@@ -77,3 +77,8 @@ test('group card shows a per-group clear control only when that group has picks'
   assert.match(withPick, /data-clear-group="A"/);
   assert.equal(/data-clear-group="B"/.test(withPick), false); // untouched groups have none
 });
+
+test('export-mode render omits the per-group clear control even when groups have picks', () => {
+  const withPick = renderBracket({ A: ['Mexico'] }, { showClearButtons: false });
+  assert.equal(/data-clear-group/.test(withPick), false);
+});

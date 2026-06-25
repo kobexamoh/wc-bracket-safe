@@ -10,15 +10,14 @@
   --ua-gold: #F2CD00;
   /* Type: a clean sans with character (deliberately not Inter); swap here to restyle everything */
   --font-sans: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  /* Type scale: 1.25 modular ratio (16px base). Every adjacent step is >=1.25x
-     apart, so the hierarchy reads clearly (no more near-identical sizes). */
+  /* Type scale: 1.25 modular ratio (16px base) with a larger display step at
+     the top (--fs-2xl) so the page/export title reads clearly above the rest. */
   --fs-2xs: 0.625rem;   /* 10px   - micro pills (advance tag) */
   --fs-xs: 0.8rem;      /* 12.8px - labels, badges, buttons, secondary UI */
   --fs-base: 1rem;      /* 16px   - body, inputs, team names, primary copy */
   --fs-lg: 1.25rem;     /* 20px   - section heading */
-  --fs-xl: 1.5625rem;   /* 25px   - page title + export title */
-  /* Sticky offset (~header height) so the toolbar + side rail pin just below it */
-  --sticky-top: 84px;
+  --fs-xl: 1.5625rem;   /* 25px   - overlay/dialog title (help modal) */
+  --fs-2xl: 2rem;       /* 32px   - display: page title + export title */
 }
 
 * {
@@ -36,13 +35,12 @@ body {
   overflow-x: hidden;
 }
 
+/* The branded masthead scrolls away with the page; the bracket toolbar is the
+   single sticky layer (below), so there's no two-sticky overlap to manage. */
 header {
   background-color: var(--ua-green);
   color: white;
   padding: 16px 20px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
 }
 
 /* App header: title on the left, account actions (Sign Out) pinned top-right */
@@ -50,6 +48,7 @@ header {
   max-width: 1500px;
   margin: 0 auto;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -60,7 +59,7 @@ header {
 }
 
 header h1 {
-  font-size: var(--fs-xl);
+  font-size: var(--fs-2xl);
   margin-bottom: 2px;
 }
 
@@ -71,6 +70,8 @@ header p {
 
 .header-actions {
   flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
 }
 
 /* Sign Out lives on the green header, so invert the ghost button for contrast */
@@ -86,6 +87,17 @@ header p {
   box-shadow: none;
 }
 
+/* "Logged in as …" sits on the green header, so it's white + compact */
+.header-user {
+  color: #ffffff;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  max-width: 40vw;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /* Utilities */
 .container {
   max-width: 1500px;
@@ -97,6 +109,27 @@ header p {
 #authSection {
   max-width: 520px;
   margin: 0 auto;
+}
+
+/* Sign-in row: email grows, the Sign In button sits to its right; wraps on narrow screens */
+.auth-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.auth-form__input {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: var(--fs-base);
+}
+
+.auth-form__submit {
+  flex: 0 0 auto;
 }
 
 .btn {
@@ -238,19 +271,19 @@ header p {
 
 @media (min-width: 1024px) {
   .bracket-layout {
-    grid-template-columns: minmax(0, 3fr) minmax(240px, 1fr);
+    grid-template-columns: minmax(0, 4fr) minmax(220px, 1fr);
     align-items: start;
   }
 
   .bracket-side {
     order: 0; /* back to the right-hand column */
     position: sticky;
-    top: var(--sticky-top);
+    top: 0;
   }
 
   /* Denser grid in the wider left column; the off-screen export grid is untouched */
   .bracket-main .groups-grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 12px;
   }
 }
@@ -290,7 +323,7 @@ header p {
 }
 
 .team-flag {
-  width: 1.6rem;
+  width: 1.4rem;
   text-align: center;
   font-size: var(--fs-base);
 }
@@ -298,6 +331,7 @@ header p {
 .team-name {
   font-weight: 600;
   color: #1f2937;
+  white-space: nowrap; /* keep country names on one line; the advance pill wraps below if tight */
 }
 
 /* Alert messages */
@@ -345,28 +379,14 @@ header p {
 /* ============================================
    Interactive ranking UI
    ============================================ */
-.user-info {
-  margin-bottom: 16px;
-  padding: 10px 12px;
-  background: #eef2ff;
-  border: 1px solid #c7d2fe;
-  border-radius: 8px;
-  font-size: var(--fs-xs);
-}
-
-/* Top bar: user info (left) + actions (feedback, sign out) on the right */
+/* Top bar now holds just the screenshot "Your name" field (account info + Sign Out live in the header) */
 .bracket-topbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   margin-bottom: 16px;
-}
-
-.bracket-topbar .user-info {
-  margin-bottom: 0;
-  flex: 1;
 }
 
 /* "Your name" field in the top bar (used to personalize the screenshot export) */
@@ -417,6 +437,43 @@ header p {
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.22);
 }
 
+/* Mobile-only sticky bottom Submit bar (hidden on desktop, where the toolbar pins) */
+.submit-bar-mobile {
+  display: none;
+}
+
+/* Status (errors/success) rides inside the bar on mobile; collapses when empty */
+.submit-bar-mobile__status:empty {
+  display: none;
+}
+
+.submit-bar-mobile__status .alert {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: var(--fs-xs);
+}
+
+/* Status that rides inside the sticky toolbar on large tablets (shown only there) */
+.toolbar-status {
+  display: none;
+}
+
+.toolbar-status .alert {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: var(--fs-xs);
+}
+
+.submit-bar-mobile__progress {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--navy);
+}
+
 /* Off-screen branded card used only to render the downloadable PNG */
 .bracket-export {
   position: fixed;
@@ -442,7 +499,7 @@ header p {
 
 .bracket-export__head h2 {
   margin: 0;
-  font-size: var(--fs-xl);
+  font-size: var(--fs-2xl);
 }
 
 .bracket-export__head span {
@@ -453,7 +510,7 @@ header p {
 
 .bracket-toolbar {
   position: sticky;
-  top: var(--sticky-top);
+  top: 0;
   z-index: 50;
   display: flex;
   flex-wrap: wrap;
@@ -582,7 +639,7 @@ header p {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 8px 10px;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -696,7 +753,7 @@ header p {
 }
 
 .modal__head h2 {
-  font-size: var(--fs-lg);
+  font-size: var(--fs-xl);
   color: var(--navy);
 }
 
@@ -745,4 +802,86 @@ header p {
   justify-content: flex-end;
   padding: 16px 20px;
   border-top: 1px solid var(--border);
+}
+
+/* ============================================
+   Mobile (phones + small tablets) — kept LAST so these overrides win over the
+   base rules above. Media queries don't add specificity, so source order breaks
+   the tie; placing this block earlier let later base rules (e.g.
+   .submit-bar-mobile display:none, .bracket-toolbar position:sticky) override it.
+   ============================================ */
+@media (max-width: 768px) {
+  /* Compact masthead: the account row wraps below the title; tame the display title */
+  header {
+    padding: 12px 16px;
+  }
+  header h1 {
+    font-size: var(--fs-xl);
+  }
+  .header-user {
+    max-width: 100%;
+  }
+  /* The toolbar wraps to several rows on phones; keep it in normal flow (not
+     sticky) so it never eats the small viewport */
+  .bracket-toolbar {
+    position: static;
+  }
+  /* The bottom bar carries Submit on phones; hide the duplicate in the toolbar */
+  #saveBtn {
+    display: none;
+  }
+  /* With the toolbar in-flow, a fixed bottom bar keeps Submit (and status) one tap away */
+  .submit-bar-mobile {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 150;
+    padding: 10px 14px;
+    background: #ffffff;
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 14px rgba(15, 23, 42, 0.10);
+  }
+  .submit-bar-mobile__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .submit-bar-mobile__btn {
+    flex: 0 0 auto;
+  }
+  /* Status now rides in the bottom bar, so hide the top-of-page rail copy here */
+  .side-messages {
+    display: none;
+  }
+  /* Keep the last group above the fixed bar, and lift the feedback FAB clear of it */
+  body {
+    padding-bottom: 84px;
+  }
+  .feedback-fab {
+    bottom: 108px;
+  }
+}
+
+/* ============================================
+   Large tablets (769-1023px): single column but the toolbar is still the sticky
+   top bar, so the status rides INSIDE it (visible at the action point) and the
+   top-of-content rail is hidden. Phones use the bottom bar; desktop uses the rail.
+   ============================================ */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .toolbar-status {
+    display: block;
+    flex-basis: 100%;
+  }
+  .toolbar-status:empty {
+    display: none;
+  }
+  .side-messages {
+    display: none;
+  }
 }

@@ -77,14 +77,20 @@ function emailLocalPart(email) {
 const ALERT_DEFAULT_MS = 6000;
 let alertTimer = null;
 
-function alertTarget() {
+// Containers a message can live in: the sign-in screen, the desktop rail, and
+// the mobile bottom-bar status. CSS shows whichever fits the current breakpoint.
+const ALERT_CONTAINER_IDS = ['alerts', 'authAlerts', 'alertsMobile', 'alertsToolbar'];
+
+function alertTargets() {
   const section = document.getElementById('bracketSection');
   const onBracket = section && section.style.display !== 'none';
-  return (
-    (onBracket ? document.getElementById('alerts') : document.getElementById('authAlerts')) ||
-    document.getElementById('alerts') ||
-    document.getElementById('authAlerts')
-  );
+  // On the bracket screen, mirror into the rail (desktop) AND the bottom-bar
+  // status (mobile); CSS hides whichever doesn't apply at the current width.
+  const ids = onBracket ? ['alerts', 'alertsToolbar', 'alertsMobile'] : ['authAlerts'];
+  const targets = ids.map((id) => document.getElementById(id)).filter(Boolean);
+  if (targets.length) return targets;
+  // Fallback so a message is never silently dropped.
+  return [document.getElementById('alerts') || document.getElementById('authAlerts')].filter(Boolean);
 }
 
 function clearAllAlerts() {
@@ -92,29 +98,31 @@ function clearAllAlerts() {
     clearTimeout(alertTimer);
     alertTimer = null;
   }
-  ['alerts', 'authAlerts'].forEach((id) => {
+  ALERT_CONTAINER_IDS.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.replaceChildren();
   });
 }
 
 function showAlert(message, type = 'info', options = {}) {
-  const target = alertTarget();
-  if (!target) return;
-  // Clear any current message (on either screen) so only one ever shows.
+  const targets = alertTargets();
+  if (!targets.length) return;
+  // Clear any current message everywhere so only one ever shows.
   clearAllAlerts();
 
-  const alertDiv = document.createElement('div');
-  alertDiv.className = `alert ${type}`;
-  alertDiv.textContent = message;
-  target.replaceChildren(alertDiv);
+  targets.forEach((target) => {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert ${type}`;
+    alertDiv.textContent = message;
+    target.replaceChildren(alertDiv);
+  });
 
   // Errors stay until the next action replaces them; everything else fades out.
   const persist = options.persist ?? (type === 'error');
   if (!persist) {
     const ms = options.duration ?? ALERT_DEFAULT_MS;
     alertTimer = setTimeout(() => {
-      if (target.firstChild === alertDiv) target.replaceChildren();
+      targets.forEach((target) => target.replaceChildren());
     }, ms);
   }
 }
@@ -237,15 +245,29 @@ const nameInput = document.getElementById('displayNameInput');
 const saveStatusEl = document.getElementById('saveStatus');
 const progressTextEl = document.getElementById('progressText');
 const progressBarEl = document.getElementById('progressBar');
+// Mobile-only mirror controls (the sticky bottom Submit bar)
+const saveBtnMobile = document.getElementById('saveBtnMobile');
+const progressTextElMobile = document.getElementById('progressTextMobile');
 
 function setSaveStatus(text) {
   if (saveStatusEl) saveStatusEl.textContent = text;
 }
 
+// Submit appears twice (desktop toolbar + mobile bottom bar); toggle both together.
+function setSubmitButtons(disabled, label) {
+  [saveBtn, saveBtnMobile].forEach((btn) => {
+    if (!btn) return;
+    btn.disabled = disabled;
+    btn.textContent = label;
+  });
+}
+
 function updateProgress() {
   const groups = getGroupOrder();
   const done = groups.filter((code) => (picks[code]?.length || 0) >= ADVANCE_COUNT).length;
-  if (progressTextEl) progressTextEl.textContent = `${done} / ${groups.length} groups set`;
+  const label = `${done} / ${groups.length} groups set`;
+  if (progressTextEl) progressTextEl.textContent = label;
+  if (progressTextElMobile) progressTextElMobile.textContent = label;
   if (progressBarEl) progressBarEl.style.transform = `scaleX(${done / groups.length})`;
 }
 
@@ -394,10 +416,7 @@ async function handleSave() {
     clearTimeout(draftTimer);
     draftTimer = null;
   }
-  if (saveBtn) {
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Submitting…';
-  }
+  setSubmitButtons(true, 'Submitting…');
   setSaveStatus('Submitting…');
   try {
     const saved = await savePicks(supabase, currentUser.id, picks);
@@ -417,10 +436,7 @@ async function handleSave() {
     setSaveStatus('Not submitted');
     showAlert(`❌ Couldn't submit your bracket: ${err.message}`, 'error');
   } finally {
-    if (saveBtn) {
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Submit bracket';
-    }
+    setSubmitButtons(false, 'Submit bracket');
   }
 }
 
@@ -514,7 +530,7 @@ async function checkAuth() {
       
       // Display user info (redacted email for privacy)
       const userInfoDiv = document.getElementById('userInfo');
-      userInfoDiv.textContent = `👤 Logged in as: ${redactEmail(currentUser.email)}`;
+      userInfoDiv.textContent = `Logged in as: ${redactEmail(currentUser.email)}`;
     } else {
       showAuthSection();
     }
@@ -580,6 +596,7 @@ async function loadBracket() {
 document.getElementById('loginForm').addEventListener('submit', handleLogin);
 document.getElementById('logoutBtn').addEventListener('click', handleLogout);
 if (saveBtn) saveBtn.addEventListener('click', handleSave);
+if (saveBtnMobile) saveBtnMobile.addEventListener('click', handleSave);
 if (deselectBtn) deselectBtn.addEventListener('click', handleDeselectAll);
 if (randomBtn) randomBtn.addEventListener('click', handleSelectForMe);
 if (exportBtn) exportBtn.addEventListener('click', handleExport);
