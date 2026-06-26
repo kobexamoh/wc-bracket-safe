@@ -13,6 +13,7 @@ import { sanitizeEmail, redactEmail } from './sanitize.js';
 import { renderBracket, getGroupOrder, getGroupTeamNames, randomPicks, fillBlankRanks, randomizeGroups, ADVANCE_COUNT } from './bracketData.js';
 import { loadBracketRow, savePicks } from './bracketStore.js';
 import { downloadBracketImage } from './exportImage.js';
+import { celebrate } from './celebrate.js';
 import { saveDraft, readDraft, clearDraft, shouldRestoreDraft } from './draftStore.js';
 import { isOtpCooldownActive, formatCooldownSeconds } from './authUtils.js';
 import { config } from '../config/supabase.js';
@@ -153,6 +154,8 @@ const selectApplyBtn = document.getElementById('selectApplyBtn');
 const selectGroupsFieldset = document.getElementById('selectGroupsFieldset');
 const selectGroupsGrid = document.getElementById('selectGroupsGrid');
 const selectRememberCheckbox = document.getElementById('selectRemember');
+const successModal = document.getElementById('successModal');
+const successScreenshotBtn = document.getElementById('successScreenshotBtn');
 const HELP_SEEN_KEY = 'wc-bracket:seen-help';
 
 // "Select for me" chooser: the choice remembered for this signed-in session
@@ -551,11 +554,19 @@ async function handleSave() {
     clearDraft(draftStorage, currentUser.id); // DB is now the source of truth
     renderBracketUI();
     setSaveStatus('Submitted ✓');
-    showAlert(
-      '✅ Bracket submitted! Log back in anytime to change it, screenshot it for the team in Campfire, or clear it to start a new one.',
-      'success',
-      { duration: 9000 }
-    );
+    // The celebratory modal now carries the confirmation, so don't also stack a
+    // banner. Fall back to the in-place alert only if the modal markup is missing.
+    if (successModal) {
+      clearAllAlerts();
+      openModal(successModal);
+      celebrate(); // brief, lazy-loaded, brand-tinted confetti; no-ops under reduced motion
+    } else {
+      showAlert(
+        '✅ Bracket submitted! Log back in anytime to change it, screenshot it for the team in Campfire, or clear it to start a new one.',
+        'success',
+        { duration: 9000 }
+      );
+    }
   } catch (err) {
     console.error('Save error:', err);
     setSaveStatus('Not submitted');
@@ -752,6 +763,20 @@ if (selectModal) {
 }
 if (selectGroupsGrid) selectGroupsGrid.addEventListener('change', syncChooserState);
 if (selectApplyBtn) selectApplyBtn.addEventListener('click', applyChooserAndClose);
+
+// Submit-success modal: close via ×, Done, or backdrop; "Screenshot my bracket"
+// closes the celebration and reuses the existing export handler.
+if (successModal) {
+  successModal.querySelectorAll('[data-close-success]').forEach((el) => {
+    el.addEventListener('click', () => closeModal(successModal));
+  });
+}
+if (successScreenshotBtn) {
+  successScreenshotBtn.addEventListener('click', () => {
+    closeModal(successModal);
+    handleExport();
+  });
+}
 
 // Flush a pending draft synchronously before the page is hidden or unloaded, so
 // a refresh inside the debounce window still persists the latest picks.

@@ -797,6 +797,21 @@ header p {
   margin-bottom: 4px;
 }
 
+/* Submit-success "what now" list — tokenised spacing, navy lead-ins */
+.success-list {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #4b5563;
+  font-size: var(--fs-base);
+}
+
+.success-list strong {
+  color: var(--navy);
+}
+
 .modal__foot {
   display: flex;
   justify-content: flex-end;
@@ -923,6 +938,11 @@ header p {
   .header-user {
     max-width: 100%;
   }
+  /* The account row wraps full-width below the title, so push Sign Out to the right */
+  .header-actions {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
   /* Keep the action bar reachable while scrolling: a compact sticky bar holding
      just the secondary actions. Submit, progress, and status live in the fixed
      bottom bar, so their in-toolbar duplicates are hidden to keep this row tight.
@@ -962,7 +982,8 @@ header p {
     right: 0;
     bottom: 0;
     z-index: 150;
-    padding: 10px 14px;
+    /* Pad the bottom past iOS Safari's home indicator / bottom chrome */
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
     background: #ffffff;
     border-top: 1px solid var(--border);
     box-shadow: 0 -4px 14px rgba(15, 23, 42, 0.10);
@@ -980,12 +1001,13 @@ header p {
   .side-messages {
     display: none;
   }
-  /* Keep the last group above the fixed bar, and lift the feedback FAB clear of it */
+  /* Keep the last group above the fixed bar, and lift the feedback FAB clear of it
+     (+ the iOS safe-area inset so neither hides behind the home indicator) */
   body {
-    padding-bottom: 84px;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
   }
   .feedback-fab {
-    bottom: 108px;
+    bottom: calc(108px + env(safe-area-inset-bottom));
   }
 }
 
