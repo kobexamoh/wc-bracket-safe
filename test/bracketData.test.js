@@ -11,6 +11,7 @@ test('tournament groups include all 12 groups and four teams each', () => {
   assert.equal(groups[11].code, 'L');
   assert.equal(groups.every(group => group.teams.length === 4), true);
   assert.equal(groups.every(group => group.flags.length === 4), true);
+  assert.equal(groups.every(group => group.codes.length === 4), true);
 });
 
 test('group order is stable for the UI and bracket rendering', () => {
@@ -34,6 +35,16 @@ test('bracket renders clickable team controls for every group', () => {
   assert.match(html, /group-card/);
   assert.match(html, /data-group="A"/);
   assert.match(html, /data-index="0"/);
+});
+
+test('team rows render self-hosted image flags (incl. UK subdivisions), not emoji', () => {
+  const html = renderBracket();
+
+  assert.match(html, /<img class="team-flag" src="\/flags\/mx\.svg" alt="" width="20" height="15">/);
+  assert.match(html, /src="\/flags\/gb-eng\.svg"/); // England
+  assert.match(html, /src="\/flags\/gb-sct\.svg"/); // Scotland
+  const flagImgs = html.match(/class="team-flag"/g) || [];
+  assert.equal(flagImgs.length, 48); // 12 groups x 4 teams, all images
 });
 
 test('bracket marks the top two ranked teams as advancing with rank badges', () => {
