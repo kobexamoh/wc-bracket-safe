@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "flags:sync": "node scripts/sync-flags.js",
     "test": "node --test test/*.test.js"
   },
   "dependencies": {
@@ -16,6 +17,7 @@
     "html2canvas": "^1.4.1"
   },
   "devDependencies": {
+    "flag-icons": "^7.5.0",
     "vite": "^5.0.0"
   }
 }

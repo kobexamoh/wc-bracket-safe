@@ -76,6 +76,27 @@ function buildExportNode(doc, picks, width, title) {
 }
 
 /**
+ * Resolve once every <img> in the node has finished loading (or errored), so the
+ * off-screen flag SVGs are actually painted before html2canvas rasterizes the
+ * card. The flags are same-origin (served from /flags), so this is a timing
+ * guard, not a CORS one. A per-image timeout makes sure a stuck request can
+ * never block the download forever.
+ */
+function waitForImages(node, timeoutMs = 5000) {
+  const imgs = Array.from(node.querySelectorAll('img'));
+  return Promise.all(
+    imgs.map((img) => {
+      if (img.complete) return Promise.resolve();
+      return new Promise((resolve) => {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+        setTimeout(resolve, timeoutMs);
+      });
+    })
+  );
+}
+
+/**
  * Render the branded bracket card off-screen and trigger a PNG download.
  * Returns the filename used. Throws if the canvas can't be produced.
  */
@@ -93,11 +114,13 @@ export async function downloadBracketImage(picks, options = {}) {
   doc.body.appendChild(node);
 
   try {
+    await waitForImages(node); // make sure the flag SVGs are painted before capture
     const html2canvas = await loadHtml2canvas();
     const canvas = await html2canvas(node, {
       scale: 2,
       backgroundColor: '#ffffff',
       windowWidth: width,
+      useCORS: true,
       logging: false,
     });
 

@@ -322,10 +322,16 @@ header p {
   border-top: 0;
 }
 
+/* Self-hosted SVG flag (flag-icons 4x3). Width kept at ~1.4rem so the row
+   layout and the long-name one-line fix are unchanged from the emoji version. */
 .team-flag {
   width: 1.4rem;
-  text-align: center;
-  font-size: var(--fs-base);
+  height: 1.05rem; /* 4:3 */
+  flex: 0 0 auto; /* don't let the flag shrink in the flex row */
+  object-fit: contain;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.1); /* faint ring so light flags read on white */
+  vertical-align: middle;
 }
 
 .team-name {

@@ -13,6 +13,29 @@ const GROUPS = {
   L: { teams: ['England', 'Croatia', 'Ghana', 'Panama'], flags: ['🏴󠁧󠁢󠁥󠁮󠁧󠁿', '🇭🇷', '🇬🇭', '🇵🇦'] },
 };
 
+// Map each team to its flag asset code: ISO 3166-1 alpha-2, except England and
+// Scotland, which use ISO 3166-2 subdivision codes (gb-eng / gb-sct) — exactly
+// the Unicode subdivision emoji that Windows renders as a plain black flag, so
+// these are the cases image flags fix. Keyed by the team names in GROUPS.
+const FLAG_CODES = {
+  'Mexico': 'mx', 'South Africa': 'za', 'South Korea': 'kr', 'Czech Rep.': 'cz',
+  'Canada': 'ca', 'Bosnia & Herz.': 'ba', 'Qatar': 'qa', 'Switzerland': 'ch',
+  'Brazil': 'br', 'Morocco': 'ma', 'Haiti': 'ht', 'Scotland': 'gb-sct',
+  'United States': 'us', 'Paraguay': 'py', 'Australia': 'au', 'Turkey': 'tr',
+  'Germany': 'de', 'Curaçao': 'cw', 'Ivory Coast': 'ci', 'Ecuador': 'ec',
+  'Netherlands': 'nl', 'Japan': 'jp', 'Sweden': 'se', 'Tunisia': 'tn',
+  'Belgium': 'be', 'Egypt': 'eg', 'Iran': 'ir', 'New Zealand': 'nz',
+  'Spain': 'es', 'Cape Verde': 'cv', 'Saudi Arabia': 'sa', 'Uruguay': 'uy',
+  'France': 'fr', 'Senegal': 'sn', 'Iraq': 'iq', 'Norway': 'no',
+  'Argentina': 'ar', 'Algeria': 'dz', 'Austria': 'at', 'Jordan': 'jo',
+  'Portugal': 'pt', 'DR Congo': 'cd', 'Uzbekistan': 'uz', 'Colombia': 'co',
+  'England': 'gb-eng', 'Croatia': 'hr', 'Ghana': 'gh', 'Panama': 'pa',
+};
+
+// Flags are self-hosted SVGs (flag-icons, 4x3) served same-origin from /flags,
+// so they render identically on every OS and survive the html2canvas PNG export.
+const FLAG_BASE = '/flags/';
+
 export function getTournamentGroups() {
   return Object.entries(GROUPS).map(([code, group]) => ({
     code,
@@ -20,9 +43,16 @@ export function getTournamentGroups() {
     teams: group.teams.map((team, index) => ({
       name: team,
       flag: group.flags[index],
+      code: FLAG_CODES[team],
     })),
     flags: [...group.flags],
+    codes: group.teams.map((team) => FLAG_CODES[team]),
   }));
+}
+
+// Every flag asset code in group order — used by the asset sync script and tests.
+export function getAllFlagCodes() {
+  return Object.values(GROUPS).flatMap((group) => group.teams.map((team) => FLAG_CODES[team]));
 }
 
 export function getGroupOrder() {
@@ -154,7 +184,7 @@ function renderTeamRow(code, team, index, ranked) {
     <li>
       <button type="button" class="${classes.join(' ')}" data-group="${code}" data-index="${index}" aria-pressed="${position > 0}">
         <span class="rank-badge">${position > 0 ? position : ''}</span>
-        <span class="team-flag">${team.flag}</span>
+        <img class="team-flag" src="${FLAG_BASE}${team.code}.svg" alt="" width="20" height="15">
         <span class="team-name">${esc(team.name)}</span>
         ${advancing ? '<span class="advance-tag">Advances</span>' : ''}
       </button>
