@@ -9,6 +9,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { inject } from '@vercel/analytics';
 import { sanitizeEmail, redactEmail } from './sanitize.js';
 import { renderBracket, getGroupOrder, getGroupTeamNames, randomPicks, fillBlankRanks, randomizeGroups, ADVANCE_COUNT } from './bracketData.js';
 import { loadBracketRow, savePicks } from './bracketStore.js';
@@ -20,6 +21,11 @@ import { config } from '../config/supabase.js';
 
 // Initialize Supabase
 const supabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
+
+// Vercel Web Analytics: cookieless page/visit metrics. Only records on the
+// deployed domain (a no-op locally), so enable Web Analytics in the Vercel
+// dashboard for it to collect anything.
+inject();
 
 // State
 let currentUser = null;
