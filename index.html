@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>2026 WC Bracket Predictor - Work Safe Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -173,6 +173,29 @@
             <div class="modal__foot">
                 <button type="button" class="btn btn-ghost" data-close-select>Cancel</button>
                 <button id="selectApplyBtn" type="button" class="btn btn-primary">Fill in the blanks</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submit success: the celebratory confirmation moment (confetti fires on open) -->
+    <div id="successModal" class="modal" hidden>
+        <div class="modal__backdrop" data-close-success></div>
+        <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="successTitle" tabindex="-1">
+            <div class="modal__head">
+                <h2 id="successTitle">🎉 Bracket submitted!</h2>
+                <button type="button" class="modal__close" data-close-success aria-label="Close">&times;</button>
+            </div>
+            <div class="modal__body">
+                <p class="modal__lead">Nice one — your picks are locked in and saved. Here's what you can do next:</p>
+                <ul class="success-list">
+                    <li><strong>Change it anytime.</strong> Log back in and resubmit — your most recent save is what counts.</li>
+                    <li><strong>Share it.</strong> Screenshot your bracket and drop it in the team Campfire.</li>
+                    <li><strong>Start fresh.</strong> Use Deselect all to clear everything and build a new one.</li>
+                </ul>
+            </div>
+            <div class="modal__foot">
+                <button type="button" class="btn btn-ghost" data-close-success>Done</button>
+                <button type="button" id="successScreenshotBtn" class="btn btn-primary">Screenshot my bracket</button>
             </div>
         </div>
     </div>

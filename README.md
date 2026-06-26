@@ -20,7 +20,7 @@ A single-page app for a friendly office World Cup pool:
 - **Fix one group at a time.** Each group has its own **Clear**, so a single bad guess doesn't cost you the whole bracket.
 - **It behaves on a phone.** The layout reflows for phones and tablets; the action buttons ride in a compact bar that stays put as you scroll, and Submit sits in a fixed bar at the bottom so it's always a tap away.
 
-That's the whole job — plus a pile of quality-of-life touches that arrived after kickoff (Chapters IV through VII). It does that job and then stops, which is more than can be said for most software.
+That's the whole job — plus a pile of quality-of-life touches that arrived after kickoff (Chapters IV through VIII). It does that job and then stops, which is more than can be said for most software.
 
 ---
 
@@ -72,6 +72,11 @@ The last big pass was making it pleasant on whatever screen people actually use:
 - **A second look from the AI-tells detector.** This time it flagged the typeface as a fallback — except the web font *was* loading; the detector just measures it headless, before the font arrives. Confirmed in a real browser, left as-is. The page title did get an honest size bump so the hierarchy reads clearly.
 - **A quiet bug, squashed.** The exported screenshot had started smuggling the per-group **Clear** button into the picture. It no longer does.
 - **The action bar comes along for the ride.** On phones the toolbar used to scroll away; now it's a compact sticky bar, so **Select for me**, **Deselect all**, and the screenshot button stay one tap away while you scroll the groups (Submit and the running count live in the bottom bar).
+## VIII. In Which Submitting Becomes a Moment
+The last thing missing was a sense of occasion. Hitting **Submit** worked, but it felt like filing paperwork — a status line that blinked and vanished.
+- **A proper finish.** Submitting now opens a small celebratory confirmation that says what just happened and what you can do next: change it any time, screenshot it for the group chat, or start fresh.
+- **Confetti, responsibly.** A brief two-sided burst in the U of A's green and gold marks the moment, tinted from the same design tokens as the rest of the interface. It loads only when you submit, is over in under a second, and sits out entirely for anyone who has asked their system for reduced motion.
+- **Two phone nits, filed.** The fixed Submit bar and the Report-a-bug button now clear the iPhone's home-indicator strip, and on a narrow screen Sign Out finally sits where it belongs — over on the right.
 
 ---
 
@@ -82,6 +87,7 @@ The last big pass was making it pleasant on whatever screen people actually use:
 - **Auth emails:** a custom SMTP provider ([Resend](https://resend.com/)) on a subdomain you control, because Supabase's built-in mailer is rate-limited and will tap out the moment a dozen coworkers log in at once.
 - **Hosting:** [Vercel](https://vercel.com/), redeploying on every push.
 - **Image export:** [html2canvas](https://html2canvas.hertzen.com/), loaded on demand so it never weighs down the first page load.
+- **Confetti:** [canvas-confetti](https://github.com/catdad/canvas-confetti) — a tiny, zero-dependency celebration fired on submit, also loaded on demand and skipped under reduced-motion.
 - **Tests:** Node's built-in test runner. No dependencies, no ceremony.
 
 ```
@@ -94,6 +100,7 @@ wc-bracket-safe/
 │   │   ├── authUtils.js    # the "stop spamming the login button" cooldown
 │   │   ├── bracketData.js  # the 48 teams, 12 groups, the renderer + randomizer
 │   │   ├── bracketStore.js # load / save / validate picks
+│   │   ├── celebrate.js    # lazy, brand-tinted confetti on submit (reduced-motion aware)
 │   │   ├── draftStore.js   # local autosave drafts + restore logic
 │   │   ├── exportImage.js  # off-screen branded card → downloadable PNG
 │   │   └── sanitize.js     # input scrubbing + email redaction
@@ -177,7 +184,8 @@ The launch did exactly one thing well and saved the rest for daylight:
 - **Phase 1.5 — ✅ shipped.** Autosave drafts and image export both landed (see Chapter IV), alongside a round of UX fixes from testing it on myself.
 - **Phase ~1.75** — mostly handled now — branded sign-in emails, deliverability sorted (a verified custom SMTP subdomain), the redirect taught to come home, and a same-browser hint shipped. The fallback to a 6-digit code, should corporate mail ever get fussy, is still on the shelf.
 - **Post-launch polish — shipped.** A single in-place status line, a how-it-works explainer, per-group clear, a full responsive pass for phones and tablets (Chapters VI–VII), and a safer **Select for me** that lets you fill only the blanks, re-roll selected groups, or replace everything (never overwriting your picks by surprise).
-- **Next, before the knockouts** — cross-platform flag rendering (a few flags fall back to letter-boxes on Windows) and a more celebratory submit confirmation.
+- **A celebratory finish — shipped.** Submitting now gets a confirmation moment and a brief, reduced-motion-aware confetti burst in green and gold (Chapter VIII).
+- **Next, before the knockouts** — cross-platform flag rendering (a few flags fall back to letter-boxes on Windows).
 - **Phase 2** — the knockout rounds, and a quiet notification when someone submits a bracket.
 - **Phase 3** — a scoring engine and a leaderboard, so the per-round prizes have something to measure. *(This is the part I promised coworkers out loud before building it, which is the traditional order of operations.)*
 
