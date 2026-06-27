@@ -370,9 +370,9 @@ header p {
   border: 1px solid #42a5f5;
 }
 
-/* Relocated masthead tagline — now the login screen's subtitle, sized to breathe
-   fluidly across screen sizes (clamp keeps it ~20px on phones, ~26px on desktop). */
-.auth-tagline {
+/* Page tagline (masthead subtitle) — shown on both the sign-in screen and the
+   bracket screen, sized to breathe fluidly (clamp ~20px phones -> ~26px desktop). */
+.page-tagline {
   margin-bottom: 18px;
   font-size: clamp(1.25rem, 1.05rem + 1vw, 1.625rem);
   line-height: 1.35;
