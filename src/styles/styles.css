@@ -109,6 +109,11 @@ header p {
 #authSection {
   max-width: 520px;
   margin: 0 auto;
+  /* Push the sign-in block into the upper-middle so it isn't clustered at the top
+     with empty grey below. Approx form-bottom targets: ~500px desktop / ~475px
+     tablet / ~550px mobile (tablet + mobile overridden in the media blocks).
+     These depend on text wrapping, so nudge the padding-top if it sits off. */
+  padding-top: 56px;
 }
 
 /* Sign-in row: email grows, the Sign In button sits to its right; wraps on narrow screens */
@@ -365,12 +370,24 @@ header p {
   border: 1px solid #42a5f5;
 }
 
-/* Sign-in intro copy above the form: plain text, not an alert box. */
+/* Relocated masthead tagline — now the login screen's subtitle, sized to breathe
+   fluidly across screen sizes (clamp keeps it ~20px on phones, ~26px on desktop). */
+.auth-tagline {
+  margin-bottom: 18px;
+  font-size: clamp(1.25rem, 1.05rem + 1vw, 1.625rem);
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+/* Sign-in intro copy above the form: plain text, not an alert box. Bumped up from
+   base so the sign-in screen breathes instead of sitting tiny at the top. */
 .auth-lead {
   margin-bottom: 16px;
   max-width: 70ch;
   color: #4b5563;
   line-height: 1.5;
+  font-size: var(--fs-lg);
 }
 
 .auth-lead strong {
@@ -970,6 +987,10 @@ header p {
    .submit-bar-mobile display:none, .bracket-toolbar position:sticky) override it.
    ============================================ */
 @media (max-width: 768px) {
+  /* The larger copy already fills a phone screen, so only a small top nudge here */
+  #authSection {
+    padding-top: 8px;
+  }
   /* Compact masthead: the account row wraps below the title; tame the display title */
   header {
     padding: 12px 16px;
@@ -1059,6 +1080,9 @@ header p {
    top-of-content rail is hidden. Phones use the bottom bar; desktop uses the rail.
    ============================================ */
 @media (min-width: 769px) and (max-width: 1023px) {
+  #authSection {
+    padding-top: 36px;
+  }
   .toolbar-status {
     display: block;
     flex-basis: 100%;
