@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>2026 WC Bracket Predictor - Work Safe Edition</title>
+    <title>2026 D+C Unofficial WC Bracket Predictor</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700;800&display=swap">
@@ -14,7 +14,7 @@
     <header>
         <div class="header-inner">
             <div class="header-title">
-                <h1>⚽ 2026 World Cup Bracket Predictor</h1>
+                <h1>⚽ 2026 World Cup Bracket Predictor - Group Stage</h1>
                 <p>Try your hand at predicting the group stage order and eventual tournament winners, and share your picks with the rest of the Digital + Creative team</p>
             </div>
             <div id="headerActions" class="header-actions" style="display: none;">
@@ -29,9 +29,9 @@
         <div id="authSection">
             <!-- Single in-place status for the sign-in screen (the bracket screen has its own messages rail) -->
             <div id="authAlerts" role="status" aria-live="polite" aria-atomic="true"></div>
-            <div class="alert info">
+            <p class="auth-lead">
                 <strong>Sign in to make your picks.</strong> Enter your email and we'll send a one-tap sign-in link. First time here? The same link gets you started — no password to create.
-            </div>
+            </p>
             <form id="loginForm" class="auth-form">
                 <input
                     type="email"
@@ -42,9 +42,16 @@
                 >
                 <button id="loginBtn" type="submit" class="btn auth-form__submit">Sign In with Email</button>
             </form>
-            <p class="auth-hint">
-                <strong>Open the link on this same device &amp; browser.</strong> A magic link opened in a different browser or a private/incognito window won't finish signing you in.
-            </p>
+            <!-- Revealed after a magic link is sent (see handleLogin): confirmation + a nod to the knockout fun -->
+            <div id="authConfirm" class="auth-confirm" hidden>
+                <p class="auth-confirm__copy">
+                    <strong>Check your email — your sign-in link is on the way.</strong> Open it on this same device &amp; browser (a different or incognito browser can't finish signing you in). No email? Give it a minute and check spam. Still nothing? Try a non-UAlberta address like Gmail.
+                </p>
+                <figure class="auth-confirm__meme">
+                    <img src="/dembele-serious-business.jpg" alt="Ousmane Dembélé grinning: the serious business is about to start" loading="lazy">
+                    <figcaption>The serious business is about to start.</figcaption>
+                </figure>
+            </div>
         </div>
 
         <!-- Bracket Section -->

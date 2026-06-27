@@ -365,21 +365,57 @@ header p {
   border: 1px solid #42a5f5;
 }
 
-/* Sign-in hint: magic links are per-browser (PKCE), so opening one in a
-   different browser or a private window can't complete the code exchange. */
-.auth-hint {
-  margin-top: 12px;
-  padding: 10px 12px;
+/* Sign-in intro copy above the form: plain text, not an alert box. */
+.auth-lead {
+  margin-bottom: 16px;
+  max-width: 70ch;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.auth-lead strong {
+  color: var(--navy);
+}
+
+/* Post-send confirmation (gold-tinted), revealed once a magic link is sent.
+   Magic links are per-browser (PKCE), so the copy nudges same-browser use. */
+.auth-confirm {
+  margin-top: 16px;
+  padding: 14px 16px;
   background: #fffaf0;
   border: 1px solid var(--gold);
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: var(--fs-xs);
   color: #4b5563;
   max-width: 70ch;
 }
 
-.auth-hint strong {
+.auth-confirm__copy {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.auth-confirm__copy strong {
   color: var(--navy);
+}
+
+.auth-confirm__meme {
+  margin: 12px 0 0;
+}
+
+.auth-confirm__meme img {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.auth-confirm__meme figcaption {
+  margin-top: 6px;
+  font-style: italic;
+  color: #6b7280;
 }
 
 /* ============================================

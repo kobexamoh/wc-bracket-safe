@@ -1,7 +1,7 @@
 {
   "name": "wc-bracket-safe",
   "version": "1.0.0",
-  "description": "2026 World Cup Bracket Predictor - Secure Work Edition",
+  "description": "2026 D+C Unofficial World Cup Bracket Predictor",
   "type": "module",
   "scripts": {
     "dev": "vite",
