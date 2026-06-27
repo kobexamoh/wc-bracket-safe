@@ -70,14 +70,16 @@ function buildExportNode(doc, picks, width, title) {
   node.appendChild(head);
 
   // renderBracket() returns trusted markup built from the known team list.
-  // Hide the per-group Clear control — it isn't useful in a static screenshot.
-  node.insertAdjacentHTML('beforeend', renderBracket(picks, { showClearButtons: false }));
+  // Hide the per-group Clear control (useless in a static screenshot) and use
+  // PNG flags (flagExt:'png') — html2canvas can't reliably rasterize SVG flags
+  // on iOS/iPadOS WebKit, but PNGs render identically on every engine.
+  node.insertAdjacentHTML('beforeend', renderBracket(picks, { showClearButtons: false, flagExt: 'png' }));
   return node;
 }
 
 /**
  * Resolve once every <img> in the node has finished loading (or errored), so the
- * off-screen flag SVGs are actually painted before html2canvas rasterizes the
+ * off-screen flag images are actually painted before html2canvas rasterizes the
  * card. The flags are same-origin (served from /flags), so this is a timing
  * guard, not a CORS one. A per-image timeout makes sure a stuck request can
  * never block the download forever.
@@ -114,7 +116,7 @@ export async function downloadBracketImage(picks, options = {}) {
   doc.body.appendChild(node);
 
   try {
-    await waitForImages(node); // make sure the flag SVGs are painted before capture
+    await waitForImages(node); // make sure the flag images are painted before capture
     const html2canvas = await loadHtml2canvas();
     const canvas = await html2canvas(node, {
       scale: 2,

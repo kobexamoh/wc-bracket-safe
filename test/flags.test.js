@@ -36,8 +36,9 @@ test('England and Scotland use ISO 3166-2 subdivision codes (the Windows-broken 
   assert.equal(byName.get('Scotland'), 'gb-sct');
 });
 
-test('a flag SVG exists on disk for every code', () => {
+test('a flag SVG + PNG exist on disk for every code', () => {
   for (const code of getAllFlagCodes()) {
     assert.ok(existsSync(join(flagsDir, `${code}.svg`)), `missing public/flags/${code}.svg`);
+    assert.ok(existsSync(join(flagsDir, `${code}.png`)), `missing public/flags/${code}.png (run npm run flags:sync)`);
   }
 });

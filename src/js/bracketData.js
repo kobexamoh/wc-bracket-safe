@@ -32,8 +32,9 @@ const FLAG_CODES = {
   'England': 'gb-eng', 'Croatia': 'hr', 'Ghana': 'gh', 'Panama': 'pa',
 };
 
-// Flags are self-hosted SVGs (flag-icons, 4x3) served same-origin from /flags,
-// so they render identically on every OS and survive the html2canvas PNG export.
+// Flags are self-hosted, same-origin assets in /flags. The live UI uses the
+// crisp `.svg`; the screenshot export uses a `.png` (flagExt='png') because
+// html2canvas can't reliably rasterize SVG-in-canvas on iOS/iPadOS WebKit.
 const FLAG_BASE = '/flags/';
 
 export function getTournamentGroups() {
@@ -142,17 +143,19 @@ export function randomizeGroups(existing = {}, codes = [], rng = Math.random) {
  * click handling lives in app.js via event delegation.
  */
 export function renderBracket(picks = {}, options = {}) {
-  const { showClearButtons = true } = options;
+  // flagExt: 'svg' for the live UI (crisp); 'png' for the screenshot export
+  // (html2canvas-safe on every engine, incl. iOS/iPadOS WebKit).
+  const { showClearButtons = true, flagExt = 'svg' } = options;
   const groups = getTournamentGroups();
 
   return `
     <div class="groups-grid">
-      ${groups.map((group) => renderGroupCard(group, picks[group.code] || [], showClearButtons)).join('')}
+      ${groups.map((group) => renderGroupCard(group, picks[group.code] || [], showClearButtons, flagExt)).join('')}
     </div>
   `;
 }
 
-function renderGroupCard(group, ranked, showClearButtons = true) {
+function renderGroupCard(group, ranked, showClearButtons = true, flagExt = 'svg') {
   const chosen = Math.min(ranked.length, MAX_RANK);
   const complete = ranked.length >= ADVANCE_COUNT;
   const hasPicks = ranked.length > 0;
@@ -167,13 +170,13 @@ function renderGroupCard(group, ranked, showClearButtons = true) {
         </div>
       </div>
       <ul>
-        ${group.teams.map((team, index) => renderTeamRow(group.code, team, index, ranked)).join('')}
+        ${group.teams.map((team, index) => renderTeamRow(group.code, team, index, ranked, flagExt)).join('')}
       </ul>
     </article>
   `;
 }
 
-function renderTeamRow(code, team, index, ranked) {
+function renderTeamRow(code, team, index, ranked, flagExt = 'svg') {
   const position = ranked.indexOf(team.name) + 1; // 0 = unranked
   const advancing = position >= 1 && position <= ADVANCE_COUNT;
   const classes = ['team-row'];
@@ -184,7 +187,7 @@ function renderTeamRow(code, team, index, ranked) {
     <li>
       <button type="button" class="${classes.join(' ')}" data-group="${code}" data-index="${index}" aria-pressed="${position > 0}">
         <span class="rank-badge">${position > 0 ? position : ''}</span>
-        <img class="team-flag" src="${FLAG_BASE}${team.code}.svg" alt="" width="20" height="15">
+        <img class="team-flag" src="${FLAG_BASE}${team.code}.${flagExt}" alt="" width="20" height="15">
         <span class="team-name">${esc(team.name)}</span>
         ${advancing ? '<span class="advance-tag">Advances</span>' : ''}
       </button>
