@@ -139,6 +139,8 @@ function showAuthSection() {
   document.getElementById('bracketSection').style.display = 'none';
   const headerActions = document.getElementById('headerActions');
   if (headerActions) headerActions.style.display = 'none'; // Sign Out hidden when logged out
+  const headerTagline = document.getElementById('headerTagline');
+  if (headerTagline) headerTagline.style.display = 'none'; // tagline lives in the grey area on the sign-in screen
   if (authConfirm) authConfirm.hidden = true; // reset the post-send confirmation
 }
 
@@ -147,6 +149,8 @@ function showBracketSection() {
   document.getElementById('bracketSection').style.display = 'block';
   const headerActions = document.getElementById('headerActions');
   if (headerActions) headerActions.style.display = 'flex'; // Sign Out in the header when logged in
+  const headerTagline = document.getElementById('headerTagline');
+  if (headerTagline) headerTagline.style.display = 'block'; // small subtitle under the h1 once logged in
   maybeAutoOpenHelp(); // first-time onboarding overlay (once per browser)
 }
 
