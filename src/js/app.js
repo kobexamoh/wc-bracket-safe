@@ -139,6 +139,9 @@ function showAuthSection() {
   document.getElementById('bracketSection').style.display = 'none';
   const headerActions = document.getElementById('headerActions');
   if (headerActions) headerActions.style.display = 'none'; // Sign Out hidden when logged out
+  const headerTagline = document.getElementById('headerTagline');
+  if (headerTagline) headerTagline.style.display = 'none'; // tagline lives in the grey area on the sign-in screen
+  if (authConfirm) authConfirm.hidden = true; // reset the post-send confirmation
 }
 
 function showBracketSection() {
@@ -146,6 +149,8 @@ function showBracketSection() {
   document.getElementById('bracketSection').style.display = 'block';
   const headerActions = document.getElementById('headerActions');
   if (headerActions) headerActions.style.display = 'flex'; // Sign Out in the header when logged in
+  const headerTagline = document.getElementById('headerTagline');
+  if (headerTagline) headerTagline.style.display = 'block'; // small subtitle under the h1 once logged in
   maybeAutoOpenHelp(); // first-time onboarding overlay (once per browser)
 }
 
@@ -162,6 +167,7 @@ const selectGroupsGrid = document.getElementById('selectGroupsGrid');
 const selectRememberCheckbox = document.getElementById('selectRemember');
 const successModal = document.getElementById('successModal');
 const successScreenshotBtn = document.getElementById('successScreenshotBtn');
+const authConfirm = document.getElementById('authConfirm');
 const HELP_SEEN_KEY = 'wc-bracket:seen-help';
 
 // "Select for me" chooser: the choice remembered for this signed-in session
@@ -623,7 +629,10 @@ async function handleLogin(e) {
     if (error) throw error;
 
     otpLastSentAt = Date.now();
-    showAlert('✅ Check your email for the login link (open it in this same browser)', 'success');
+    // Reveal the persistent confirmation (with the knockout-teaser meme) rather
+    // than a transient toast; clear any prior error so only the confirmation shows.
+    clearAllAlerts();
+    if (authConfirm) authConfirm.hidden = false;
     document.getElementById('emailInput').value = '';
   } catch (err) {
     console.error('Login error:', err);

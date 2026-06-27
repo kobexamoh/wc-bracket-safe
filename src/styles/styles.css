@@ -109,6 +109,11 @@ header p {
 #authSection {
   max-width: 520px;
   margin: 0 auto;
+  /* Push the sign-in block into the upper-middle so it isn't clustered at the top
+     with empty grey below. Approx form-bottom targets: ~500px desktop / ~475px
+     tablet / ~550px mobile (tablet + mobile overridden in the media blocks).
+     These depend on text wrapping, so nudge the padding-top if it sits off. */
+  padding-top: 56px;
 }
 
 /* Sign-in row: email grows, the Sign In button sits to its right; wraps on narrow screens */
@@ -365,21 +370,69 @@ header p {
   border: 1px solid #42a5f5;
 }
 
-/* Sign-in hint: magic links are per-browser (PKCE), so opening one in a
-   different browser or a private window can't complete the code exchange. */
-.auth-hint {
-  margin-top: 12px;
-  padding: 10px 12px;
+/* Page tagline (masthead subtitle) — shown on both the sign-in screen and the
+   bracket screen, sized to breathe fluidly (clamp ~20px phones -> ~26px desktop). */
+.page-tagline {
+  margin-bottom: 18px;
+  font-size: clamp(1.25rem, 1.05rem + 1vw, 1.625rem);
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+/* Sign-in intro copy above the form: plain text, not an alert box. Bumped up from
+   base so the sign-in screen breathes instead of sitting tiny at the top. */
+.auth-lead {
+  margin-bottom: 16px;
+  max-width: 70ch;
+  color: #4b5563;
+  line-height: 1.5;
+  font-size: var(--fs-lg);
+}
+
+.auth-lead strong {
+  color: var(--navy);
+}
+
+/* Post-send confirmation (gold-tinted), revealed once a magic link is sent.
+   Magic links are per-browser (PKCE), so the copy nudges same-browser use. */
+.auth-confirm {
+  margin-top: 16px;
+  padding: 14px 16px;
   background: #fffaf0;
   border: 1px solid var(--gold);
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: var(--fs-xs);
   color: #4b5563;
   max-width: 70ch;
 }
 
-.auth-hint strong {
+.auth-confirm__copy {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.auth-confirm__copy strong {
   color: var(--navy);
+}
+
+.auth-confirm__meme {
+  margin: 12px 0 0;
+}
+
+.auth-confirm__meme img {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.auth-confirm__meme figcaption {
+  margin-top: 6px;
+  font-style: italic;
+  color: #6b7280;
 }
 
 /* ============================================
@@ -934,6 +987,10 @@ header p {
    .submit-bar-mobile display:none, .bracket-toolbar position:sticky) override it.
    ============================================ */
 @media (max-width: 768px) {
+  /* The larger copy already fills a phone screen, so only a small top nudge here */
+  #authSection {
+    padding-top: 8px;
+  }
   /* Compact masthead: the account row wraps below the title; tame the display title */
   header {
     padding: 12px 16px;
@@ -1023,6 +1080,9 @@ header p {
    top-of-content rail is hidden. Phones use the bottom bar; desktop uses the rail.
    ============================================ */
 @media (min-width: 769px) and (max-width: 1023px) {
+  #authSection {
+    padding-top: 36px;
+  }
   .toolbar-status {
     display: block;
     flex-basis: 100%;
