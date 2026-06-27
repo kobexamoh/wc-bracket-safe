@@ -36,3 +36,6 @@ docs/PORTFOLIO_CASE_STUDY.md
 
 # User testing / feedback notes (local only - avoids exposing notes + file paths)
 user-feedback-notes/
+
+# Cursor handoff (local-only context for resuming in Cursor)
+docs/CURSOR_HANDOFF.md

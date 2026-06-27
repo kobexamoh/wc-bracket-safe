@@ -47,6 +47,14 @@ test('team rows render self-hosted image flags (incl. UK subdivisions), not emoj
   assert.equal(flagImgs.length, 48); // 12 groups x 4 teams, all images
 });
 
+test('export render uses PNG flags (html2canvas-safe on every engine, incl. iOS WebKit)', () => {
+  const html = renderBracket({}, { flagExt: 'png' });
+
+  assert.match(html, /src="\/flags\/mx\.png"/);
+  assert.match(html, /src="\/flags\/gb-eng\.png"/); // England subdivision
+  assert.equal(/\/flags\/[a-z-]+\.svg/.test(html), false); // no .svg srcs in export mode
+});
+
 test('bracket marks the top two ranked teams as advancing with rank badges', () => {
   const html = renderBracket({ A: ['South Korea', 'Mexico'] });
 

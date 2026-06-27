@@ -1,7 +1,12 @@
 /**
- * Copy only the flag SVGs this app actually uses from the `flag-icons`
- * devDependency into `public/flags/`, so the committed assets stay in sync with
- * the team list and we never vendor 250+ unused files.
+ * Vendor the flag assets this app uses from the `flag-icons` devDependency into
+ * `public/flags/`, kept in sync with the team list so we never ship 250+ unused
+ * files. For each used code we write BOTH:
+ *   - `<code>.svg` — crisp vector, used by the live UI.
+ *   - `<code>.png` — a raster (via @resvg/resvg-js) used by the screenshot
+ *     export, because html2canvas can't reliably rasterize SVG-in-canvas on
+ *     iOS/iPadOS WebKit (it mis-sizes them to a coloured corner); a PNG renders
+ *     identically on every engine.
  *
  * Source of truth for which flags to copy is `getAllFlagCodes()` in
  * bracketData.js, so adding/removing a team automatically changes what's synced.
@@ -15,6 +20,8 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
+import { Resvg } from '@resvg/resvg-js';
+
 import { getAllFlagCodes } from '../src/js/bracketData.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -22,17 +29,10 @@ const root = join(here, '..');
 const srcDir = join(root, 'node_modules', 'flag-icons', 'flags', '4x3');
 const destDir = join(root, 'public', 'flags');
 
-// html2canvas can't scale a "responsive" SVG (one with a viewBox but no width/
-// height attributes): it draws the flag at its natural 640x480 size pinned to
-// the top-left corner, so the PNG export shows only a sliver. Giving every flag
-// an explicit width/height (taken from its viewBox) fixes the export, while the
-// live UI keeps sizing flags via CSS. See html2canvas issues #1803 / #1897.
-function ensureIntrinsicSize(svg) {
-  if (/<svg[^>]*\swidth=/.test(svg)) return svg; // already sized
-  const vb = svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
-  if (!vb) return svg;
-  const [, w, h] = vb;
-  return svg.replace(/<svg\b/, `<svg width="${w}" height="${h}"`);
+// Rasterize one flag SVG to a PNG buffer at a fixed display width (4x3 aspect
+// preserved). 128px stays crisp at the small export size (~44px at scale 2).
+function svgToPng(svg) {
+  return new Resvg(svg, { fitTo: { mode: 'width', value: 128 } }).render().asPng();
 }
 
 async function main() {
@@ -55,15 +55,18 @@ async function main() {
       continue;
     }
     const svg = await readFile(from, 'utf8');
-    await writeFile(join(destDir, `${code}.svg`), ensureIntrinsicSize(svg));
+    await writeFile(join(destDir, `${code}.svg`), svg);       // live UI (vector)
+    await writeFile(join(destDir, `${code}.png`), svgToPng(svg)); // export (raster)
   }
 
   if (missing.length) {
     throw new Error(`No flag-icons SVG for: ${missing.join(', ')}`);
   }
 
-  const written = (await readdir(destDir)).filter((f) => f.endsWith('.svg'));
-  console.log(`Synced ${written.length} flag SVGs to public/flags/`);
+  const files = await readdir(destDir);
+  const svgCount = files.filter((f) => f.endsWith('.svg')).length;
+  const pngCount = files.filter((f) => f.endsWith('.png')).length;
+  console.log(`Synced ${svgCount} SVG + ${pngCount} PNG flags to public/flags/`);
 }
 
 main().catch((err) => {
