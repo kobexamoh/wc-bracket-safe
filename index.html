@@ -50,6 +50,17 @@
                 <p class="auth-confirm__copy">
                     <strong>Check your email — your sign-in link is on the way.</strong> Open it on this same device &amp; browser (a different or incognito browser can't finish signing you in). No email? Give it a minute and check spam. Still nothing? Try a non-UAlberta address like Gmail.
                 </p>
+                <p class="auth-confirm__help">
+                    <button id="loginHelpBtn" type="button" class="btn btn-ghost auth-confirm__help-btn">
+                        Didn't get the email? Notify the organizer
+                    </button>
+                    <span id="loginHelpStatus" class="auth-confirm__help-status" role="status" aria-live="polite"></span>
+                </p>
+                <!-- Honeypot for bots; kept off-screen (not type=hidden, so naive bots still fill it) -->
+                <label class="auth-confirm__honeypot" aria-hidden="true">
+                    <span>Website</span>
+                    <input id="loginHelpHoneypot" type="text" name="website" tabindex="-1" autocomplete="off">
+                </label>
                 <figure class="auth-confirm__meme">
                     <img src="/dembele-serious-business.jpg" alt="Ousmane Dembélé grinning: the serious business is about to start" loading="lazy">
                     <figcaption>The serious business is about to start.</figcaption>

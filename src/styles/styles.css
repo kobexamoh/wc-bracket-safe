@@ -435,6 +435,31 @@ header p {
   color: #6b7280;
 }
 
+.auth-confirm__help {
+  margin: 12px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.auth-confirm__help-btn {
+  font-size: var(--fs-xs);
+}
+
+.auth-confirm__help-status {
+  font-size: var(--fs-2xs);
+  color: #6b7280;
+}
+
+.auth-confirm__honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 /* ============================================
    Interactive ranking UI
    ============================================ */

@@ -184,6 +184,55 @@ Then, in the Supabase dashboard:
 
 Push to GitHub, import the repo into Vercel, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables, and deploy. Every subsequent `git push` redeploys on its own.
 
+### Admin alerts (Slack)
+
+When the pool is live, you need to know when someone can't sign in or when a bracket lands. The app exposes a single serverless endpoint — `/api/notify` — that posts to a **private Slack channel**. Nothing sensitive is hardcoded in git; every secret lives in the Vercel dashboard only.
+
+**What pings you (v1):**
+
+| Trigger | How it reaches `/api/notify` |
+|--------|------------------------------|
+| Coworker taps **Didn't get the email?** after requesting a magic link | Browser `POST` (rate-limited, CORS-locked to your domains) |
+| Someone submits or updates their bracket | Supabase **Database Webhook** on `public.brackets` |
+| Resend reports a bounce / delivery problem | Resend **Webhook** (Svix-signed) |
+
+**1. Slack (5 min)** — Create a free workspace (or use an existing one). Add a channel such as `#wc-bracket-alerts` (private is fine). **Apps → Incoming Webhooks → Add to Slack** → pick that channel → copy the webhook URL.
+
+**2. Vercel env vars** — Project → Settings → Environment Variables. Add for Production (and Preview while testing):
+
+| Variable | Value |
+|----------|--------|
+| `SLACK_WEBHOOK_URL` | The incoming webhook URL from step 1 |
+| `NOTIFY_WEBHOOK_SECRET` | A long random string you generate (e.g. `openssl rand -hex 32`) |
+| `RESEND_WEBHOOK_SECRET` | From Resend after you create a webhook (starts with `whsec_`) |
+| `NOTIFY_ALLOWED_ORIGINS` | `https://wc.kobexamoh.me` — add `http://localhost:3000` and your preview URL while testing, comma-separated |
+
+Redeploy after saving env vars.
+
+**3. Supabase Database Webhook** — Dashboard → Database → Webhooks → **Create a new hook**:
+
+- Table: `brackets`
+- Events: **Insert** and **Update**
+- URL: `https://wc.kobexamoh.me/api/notify?event=bracket`
+- HTTP headers: `Authorization: Bearer <your NOTIFY_WEBHOOK_SECRET>`
+
+**4. Resend Webhook** — Dashboard → Webhooks → **Add webhook**:
+
+- URL: `https://wc.kobexamoh.me/api/notify?event=email`
+- Events: `email.bounced`, `email.complained`, `email.delivery_delayed` (and `email.failed` if listed)
+- HTTP headers: `Authorization: Bearer <your NOTIFY_WEBHOOK_SECRET>`
+- Copy the **signing secret** into `RESEND_WEBHOOK_SECRET` in Vercel
+
+**5. Smoke test**
+
+1. Request a magic link, then click **Didn't get the email? Notify the organizer** — Slack should show the address.
+2. Submit a test bracket — Slack should show a truncated user id (not the full picks blob).
+3. Resend failures are harder to force; check Resend → Webhooks → deliver a test event after wiring.
+
+**Privacy notes:** The Slack webhook URL and bearer secret never ship in the browser bundle. Bracket webhooks send only a user id + timestamp — look up the email in Supabase Auth if you need it. Login-help and Resend alerts include the recipient email because you need that to send a manual link. Keep the repo private and rotate secrets if a webhook URL ever leaks.
+
+Local `npm run dev` does **not** run the API route — use a Vercel preview deploy or `npx vercel dev` to test end-to-end.
+
 ---
 
 ## The Roadmap (or: What Survived the Cutting-Room Floor)
@@ -195,7 +244,7 @@ The launch did exactly one thing well and saved the rest for daylight:
 - **Post-launch polish — shipped.** A single in-place status line, a how-it-works explainer, per-group clear, a full responsive pass for phones and tablets (Chapters VI–VII), and a safer **Select for me** that lets you fill only the blanks, re-roll selected groups, or replace everything (never overwriting your picks by surprise).
 - **A celebratory finish — shipped.** Submitting now gets a confirmation moment and a brief, reduced-motion-aware confetti burst in green and gold (Chapter VIII).
 - **Cross-platform flags — shipped.** Real self-hosted SVG flags replaced the emoji, so nothing falls back to letter-boxes on Windows — in the live UI and the screenshot alike (Chapter IX).
-- **Phase 2** — the knockout rounds, and a quiet notification when someone submits a bracket.
+- **Phase 2** — the knockout rounds. Bracket-submit Slack alerts are wired (see **Admin alerts** above); login-help + Resend failure pings ship in the same notify endpoint.
 - **Phase 3** — a scoring engine and a leaderboard, so the per-round prizes have something to measure. *(This is the part I promised coworkers out loud before building it, which is the traditional order of operations.)*
 
 ---
