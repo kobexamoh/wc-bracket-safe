@@ -205,7 +205,7 @@ When the pool is live, you need to know when someone can't sign in or when a bra
 | `SLACK_WEBHOOK_URL` | The incoming webhook URL from step 1 |
 | `NOTIFY_WEBHOOK_SECRET` | A long random string you generate (e.g. `openssl rand -hex 32`) |
 | `RESEND_WEBHOOK_SECRET` | From Resend after you create a webhook (starts with `whsec_`) |
-| `NOTIFY_ALLOWED_ORIGINS` | `https://wc.kobexamoh.me` — add `http://localhost:3000` and your preview URL while testing, comma-separated |
+| `NOTIFY_ALLOWED_ORIGINS` | `https://wc.kobexamoh.me` — add `http://localhost:3000` for local dev. **Preview deploys auto-trust their own Vercel URL** (hash + branch), so you do not need to update this on every redeploy. Use the stable **branch URL** from the PR comment when testing, not old hash links from the Deployments list. |
 
 Redeploy after saving env vars.
 

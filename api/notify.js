@@ -20,6 +20,7 @@ import {
   postToSlack,
   sanitizeNotifyEmail,
   verifyBearerSecret,
+  vercelAutoOrigins,
 } from '../lib/notifyUtils.js';
 
 /** @type {Map<string, number[]>} */
@@ -63,9 +64,14 @@ function routeFromQuery(url) {
   }
 }
 
+function loginHelpAllowedOrigins() {
+  const extras = readEnv('VERCEL_ENV') === 'preview' ? vercelAutoOrigins(process.env) : [];
+  return extras;
+}
+
 async function handleLoginHelp(req, res, body, now) {
   const origin = req.headers.origin;
-  if (!isAllowedOrigin(origin, readEnv('NOTIFY_ALLOWED_ORIGINS'))) {
+  if (!isAllowedOrigin(origin, readEnv('NOTIFY_ALLOWED_ORIGINS'), loginHelpAllowedOrigins())) {
     json(res, 403, { ok: false, error: 'origin_not_allowed' });
     return;
   }
@@ -188,7 +194,7 @@ async function handleResendWebhook(req, res, rawBody) {
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     const origin = req.headers.origin;
-    if (isAllowedOrigin(origin, readEnv('NOTIFY_ALLOWED_ORIGINS'))) {
+    if (isAllowedOrigin(origin, readEnv('NOTIFY_ALLOWED_ORIGINS'), loginHelpAllowedOrigins())) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type');

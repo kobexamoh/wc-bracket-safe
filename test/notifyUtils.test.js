@@ -6,7 +6,9 @@ import {
   formatSlackEmailFailure,
   formatSlackLoginHelp,
   isAllowedOrigin,
+  originFromVercelHost,
   parseResendFailureEvent,
+  vercelAutoOrigins,
   parseSupabaseBracketEvent,
   sanitizeNotifyEmail,
   verifyBearerSecret,
@@ -39,6 +41,30 @@ describe('isAllowedOrigin', () => {
     const list = 'https://wc.example.com,http://localhost:3000';
     assert.equal(isAllowedOrigin('https://wc.example.com', list), true);
     assert.equal(isAllowedOrigin('https://evil.example.com', list), false);
+  });
+
+  it('accepts extra origins (e.g. Vercel preview auto-trust)', () => {
+    const preview = 'https://wc-bracket-safe-abc123-kobes-projects.vercel.app';
+    assert.equal(isAllowedOrigin(preview, 'https://wc.kobexamoh.me', [preview]), true);
+  });
+});
+
+describe('vercelAutoOrigins', () => {
+  it('builds https origins from Vercel host env vars', () => {
+    const origins = vercelAutoOrigins({
+      VERCEL_URL: 'wc-bracket-safe-hash.vercel.app',
+      VERCEL_BRANCH_URL: 'https://wc-bracket-safe-git-feature.vercel.app/',
+    });
+    assert.deepEqual(origins, [
+      'https://wc-bracket-safe-hash.vercel.app',
+      'https://wc-bracket-safe-git-feature.vercel.app',
+    ]);
+  });
+});
+
+describe('originFromVercelHost', () => {
+  it('strips protocol and trailing slash', () => {
+    assert.equal(originFromVercelHost('https://foo.vercel.app/'), 'https://foo.vercel.app');
   });
 });
 
