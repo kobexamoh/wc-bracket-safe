@@ -34,6 +34,7 @@ let savedSnapshot = '{}'; // JSON of last persisted picks, for unsaved-change de
 let loadedUserId = null; // guards against reloading (and clobbering unsaved picks) on tab refocus
 let loadedUpdatedAt = null; // DB row's updated_at we last synced with (a draft's base version)
 let otpLastSentAt = 0;
+let lastLoginEmail = ''; // kept after OTP send so "Didn't get the email?" can notify without re-typing
 
 // Draft autosave: a guarded localStorage handle (private mode can throw on the
 // very access) and a debounce timer so we persist shortly after the user stops
@@ -142,6 +143,7 @@ function showAuthSection() {
   const headerTagline = document.getElementById('headerTagline');
   if (headerTagline) headerTagline.style.display = 'none'; // tagline lives in the grey area on the sign-in screen
   if (authConfirm) authConfirm.hidden = true; // reset the post-send confirmation
+  if (loginHelpStatus) loginHelpStatus.textContent = '';
 }
 
 function showBracketSection() {
@@ -168,6 +170,9 @@ const selectRememberCheckbox = document.getElementById('selectRemember');
 const successModal = document.getElementById('successModal');
 const successScreenshotBtn = document.getElementById('successScreenshotBtn');
 const authConfirm = document.getElementById('authConfirm');
+const loginHelpBtn = document.getElementById('loginHelpBtn');
+const loginHelpStatus = document.getElementById('loginHelpStatus');
+const loginHelpHoneypot = document.getElementById('loginHelpHoneypot');
 const HELP_SEEN_KEY = 'wc-bracket:seen-help';
 
 // "Select for me" chooser: the choice remembered for this signed-in session
@@ -629,6 +634,7 @@ async function handleLogin(e) {
     if (error) throw error;
 
     otpLastSentAt = Date.now();
+    lastLoginEmail = sanitized;
     // Reveal the persistent confirmation (with the knockout-teaser meme) rather
     // than a transient toast; clear any prior error so only the confirmation shows.
     clearAllAlerts();
@@ -642,6 +648,54 @@ async function handleLogin(e) {
       loginBtn.disabled = false;
       loginBtn.textContent = 'Sign In with Email';
     }
+  }
+}
+
+async function handleLoginHelp() {
+  const email = sanitizeEmail(lastLoginEmail);
+  if (!email) {
+    if (loginHelpStatus) loginHelpStatus.textContent = 'Enter your email above and request a link first.';
+    return;
+  }
+
+  if (loginHelpBtn) {
+    loginHelpBtn.disabled = true;
+  }
+  if (loginHelpStatus) loginHelpStatus.textContent = 'Sending…';
+
+  try {
+    const res = await fetch('/api/notify?event=login-help', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        website: loginHelpHoneypot?.value || '',
+      }),
+    });
+
+    if (res.status === 429) {
+      if (loginHelpStatus) {
+        loginHelpStatus.textContent = 'Please wait a bit before asking again.';
+      }
+      return;
+    }
+
+    if (!res.ok) {
+      if (loginHelpStatus) {
+        loginHelpStatus.textContent = 'Could not send the alert right now. Try again in a minute.';
+      }
+      return;
+    }
+
+    if (loginHelpStatus) {
+      loginHelpStatus.textContent = 'Got it — the organizer has been notified. Check spam while you wait.';
+    }
+  } catch {
+    if (loginHelpStatus) {
+      loginHelpStatus.textContent = 'Could not send the alert right now. Try again in a minute.';
+    }
+  } finally {
+    if (loginHelpBtn) loginHelpBtn.disabled = false;
   }
 }
 
@@ -659,6 +713,7 @@ async function handleLogout() {
     if (nameInput) nameInput.value = '';
     loadedUserId = null;
     loadedUpdatedAt = null;
+    lastLoginEmail = '';
     sessionSelectMode = null; // forget the remembered "Select for me" choice
     showAuthSection();
     showAlert('✅ Signed out', 'success');
@@ -746,6 +801,7 @@ async function loadBracket() {
 // ============================================
 
 document.getElementById('loginForm').addEventListener('submit', handleLogin);
+if (loginHelpBtn) loginHelpBtn.addEventListener('click', handleLoginHelp);
 document.getElementById('logoutBtn').addEventListener('click', handleLogout);
 if (saveBtn) saveBtn.addEventListener('click', handleSave);
 if (saveBtnMobile) saveBtnMobile.addEventListener('click', handleSave);
