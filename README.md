@@ -220,8 +220,7 @@ Redeploy after saving env vars.
 
 - URL: `https://wc.kobexamoh.me/api/notify?event=email`
 - Events: `email.bounced`, `email.complained`, `email.delivery_delayed` (and `email.failed` if listed)
-- HTTP headers: `Authorization: Bearer <your NOTIFY_WEBHOOK_SECRET>`
-- Copy the **signing secret** into `RESEND_WEBHOOK_SECRET` in Vercel
+- Resend does **not** offer custom HTTP headers — it signs each delivery with **Svix** instead. Copy the webhook **signing secret** (`whsec_…`) into `RESEND_WEBHOOK_SECRET` in Vercel, then redeploy.
 
 **5. Smoke test**
 

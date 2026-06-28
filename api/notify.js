@@ -156,12 +156,9 @@ async function handleBracketWebhook(req, res, body) {
 }
 
 async function handleResendWebhook(req, res, rawBody) {
-  const auth = req.headers.authorization;
-  if (!verifyBearerSecret(auth, readEnv('NOTIFY_WEBHOOK_SECRET'))) {
-    json(res, 401, { ok: false, error: 'unauthorized' });
-    return;
-  }
-
+  // Resend does not support custom HTTP headers on webhooks. It signs each
+  // delivery with Svix (svix-* headers + RESEND_WEBHOOK_SECRET) — that is
+  // sufficient; NOTIFY_WEBHOOK_SECRET is only for the Supabase DB webhook.
   const svixSecret = readEnv('RESEND_WEBHOOK_SECRET');
   if (!svixSecret) {
     json(res, 500, { ok: false, error: 'webhook_not_configured' });
