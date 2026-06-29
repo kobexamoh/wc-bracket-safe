@@ -15,6 +15,8 @@ import { renderBracket, getGroupOrder, getGroupTeamNames, randomPicks, fillBlank
 import { loadBracketRow, savePicks } from './bracketStore.js';
 import { downloadBracketImage } from './exportImage.js';
 import { celebrate } from './celebrate.js';
+import { getThirdPlaceCandidates, buildKnockoutBracket, setWinner } from './knockout.js';
+import { renderKnockoutTree } from './knockoutRender.js';
 import { mountBallChase } from './ballChase.js';
 import { saveDraft, readDraft, clearDraft, shouldRestoreDraft } from './draftStore.js';
 import { isOtpCooldownActive, formatCooldownSeconds } from './authUtils.js';
@@ -309,6 +311,7 @@ function maybeAutoOpenHelp() {
 // ============================================
 
 const bracketEl = document.getElementById('bracket');
+const knockoutEl = document.getElementById('knockout');
 const saveBtn = document.getElementById('saveBtn');
 const deselectBtn = document.getElementById('deselectBtn');
 const randomBtn = document.getElementById('randomBtn');
@@ -320,6 +323,17 @@ const progressBarEl = document.getElementById('progressBar');
 // Mobile-only mirror controls (the sticky bottom Submit bar)
 const saveBtnMobile = document.getElementById('saveBtnMobile');
 const progressTextElMobile = document.getElementById('progressTextMobile');
+
+// Knockout scaffolding: stage toggle + third-place chooser lives in the side rail.
+const stageGroupsBtn = document.getElementById('stageGroupsBtn');
+const stageKnockoutBtn = document.getElementById('stageKnockoutBtn');
+const knockoutPanel = document.getElementById('knockoutPanel');
+const thirdPlaceChooser = document.getElementById('thirdPlaceChooser');
+const applyThirdsBtn = document.getElementById('applyThirdsBtn');
+
+let activeStage = 'groups'; // 'groups' | 'knockout'
+let selectedThirdGroups = []; // 8 group letters
+let knockoutWinners = {}; // { [matchId]: 'A'|'B' }
 
 function setSaveStatus(text) {
   if (saveStatusEl) saveStatusEl.textContent = text;
@@ -347,6 +361,89 @@ function renderBracketUI() {
   if (!bracketEl) return;
   bracketEl.innerHTML = renderBracket(picks);
   updateProgress();
+}
+
+function setActiveStage(stage) {
+  activeStage = stage === 'knockout' ? 'knockout' : 'groups';
+  if (stageGroupsBtn) stageGroupsBtn.classList.toggle('side-nav__btn--active', activeStage === 'groups');
+  if (stageKnockoutBtn) stageKnockoutBtn.classList.toggle('side-nav__btn--active', activeStage === 'knockout');
+  if (knockoutPanel) knockoutPanel.hidden = activeStage !== 'knockout';
+  if (bracketEl) bracketEl.hidden = activeStage !== 'groups';
+  if (knockoutEl) knockoutEl.hidden = activeStage !== 'knockout';
+  // The group-stage header/callout should only show while the group view is active.
+  const panelHeader = document.querySelector('.panel-header');
+  if (panelHeader) panelHeader.hidden = activeStage !== 'groups';
+  if (activeStage === 'knockout') {
+    renderThirdPlaceChooser();
+    renderKnockoutUI();
+  }
+}
+
+function renderThirdPlaceChooser() {
+  if (!thirdPlaceChooser) return;
+  const candidates = getThirdPlaceCandidates(picks);
+  const chosenSet = new Set(selectedThirdGroups);
+  thirdPlaceChooser.innerHTML = candidates
+    .map(({ group, team }) => {
+      const disabled = !team;
+      const checked = chosenSet.has(group);
+      return `
+        <label class="third-place-item">
+          <input type="checkbox" value="${group}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
+          <span class="third-place-item__label">
+            <span class="third-place-item__meta">Group ${group} — 3rd</span>
+            <span class="third-place-item__team">${team ? team : '— (rank 3rd place first)'}</span>
+          </span>
+        </label>
+      `;
+    })
+    .join('');
+  syncThirdPlaceApply();
+}
+
+function syncThirdPlaceApply() {
+  if (!applyThirdsBtn) return;
+  applyThirdsBtn.disabled = selectedThirdGroups.length !== 8;
+}
+
+function onThirdPlaceChooserChange(e) {
+  const cb = e.target.closest('input[type="checkbox"]');
+  if (!cb) return;
+  const group = cb.value;
+  const next = new Set(selectedThirdGroups);
+  if (cb.checked) next.add(group);
+  else next.delete(group);
+  // Cap at 8: if this would exceed 8, undo the check.
+  if (next.size > 8) {
+    cb.checked = false;
+    return;
+  }
+  selectedThirdGroups = Array.from(next);
+  syncThirdPlaceApply();
+}
+
+function renderKnockoutUI() {
+  if (!knockoutEl) return;
+  const scrollEl = knockoutEl.querySelector('.knockout-scroll');
+  const savedScrollLeft = scrollEl ? scrollEl.scrollLeft : 0;
+
+  if (selectedThirdGroups.length !== 8) {
+    knockoutEl.innerHTML = `
+      <div class="alert info">Select exactly 8 third-place teams in the side panel to build the Round of 32.</div>
+    `;
+    return;
+  }
+  try {
+    const bracket = buildKnockoutBracket(picks, selectedThirdGroups, knockoutWinners);
+    knockoutEl.innerHTML = renderKnockoutTree(bracket, knockoutWinners);
+  } catch (err) {
+    knockoutEl.innerHTML = `<div class="alert error">${err.message}</div>`;
+  }
+
+  const newScrollEl = knockoutEl.querySelector('.knockout-scroll');
+  if (newScrollEl && savedScrollLeft > 0) {
+    newScrollEl.scrollLeft = savedScrollLeft;
+  }
 }
 
 // Click a team to assign the next finishing position; click a ranked team to
@@ -396,6 +493,10 @@ function afterPicksChanged() {
   renderBracketUI();
   setSaveStatus(hasUnsavedChanges() ? 'Saving draft…' : '');
   scheduleDraftSave();
+  if (activeStage === 'knockout') {
+    renderThirdPlaceChooser();
+    renderKnockoutUI();
+  }
 }
 
 function onBracketClick(e) {
@@ -785,6 +886,35 @@ async function checkAuth() {
     console.error('Auth check error:', err);
     showAuthSection();
   }
+}
+
+// Stage toggle + knockout chooser bindings
+if (stageGroupsBtn) stageGroupsBtn.addEventListener('click', () => setActiveStage('groups'));
+if (stageKnockoutBtn) stageKnockoutBtn.addEventListener('click', () => setActiveStage('knockout'));
+if (thirdPlaceChooser) thirdPlaceChooser.addEventListener('change', onThirdPlaceChooserChange);
+if (applyThirdsBtn) {
+  applyThirdsBtn.addEventListener('click', () => {
+    renderKnockoutUI();
+    showAlert('✅ Round of 32 updated from your third-place picks.', 'success');
+  });
+}
+
+if (knockoutEl) {
+  knockoutEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-match][data-side]');
+    if (!btn) return;
+    const matchId = btn.dataset.match;
+    const side = btn.dataset.side;
+    const prevChampion = buildKnockoutBracket(picks, selectedThirdGroups, knockoutWinners)?.championTeam || null;
+    knockoutWinners = setWinner(knockoutWinners, matchId, side);
+    renderKnockoutUI();
+
+    const nextChampion = buildKnockoutBracket(picks, selectedThirdGroups, knockoutWinners)?.championTeam || null;
+    if (!prevChampion && nextChampion) {
+      celebrate();
+      showAlert(`🏆 You picked ${nextChampion} as champion!`, 'success', { duration: 9000 });
+    }
+  });
 }
 
 // ============================================
