@@ -39,3 +39,13 @@ user-feedback-notes/
 
 # Cursor handoff (local-only context for resuming in Cursor)
 docs/CURSOR_HANDOFF.md
+
+# Portable AI context layer (Atlas) - local only: personal/career notes + project paths
+# Canonical home is ~/Desktop/Atlas (kept in iCloud). This repo only holds a gitignored
+# symlink to it, plus a local-only Cursor rule that points at it.
+atlas
+personal-context
+.cursor/rules/atlas.mdc
+
+# Original/reference scratch (local only - the pre-modular wc-bracket.html, kept for the knockout layout)
+reference/

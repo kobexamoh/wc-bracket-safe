@@ -26,45 +26,47 @@
     </header>
 
     <main class="container">
-        <!-- Auth Section -->
-        <div id="authSection">
-            <!-- Masthead tagline (shared): the sign-in screen's subtitle, above the form -->
-            <p class="page-tagline">Try your hand at predicting the group stage order and eventual tournament winners, and share your picks with the rest of the Digital + Creative team.</p>
-            <!-- Single in-place status for the sign-in screen (the bracket screen has its own messages rail) -->
-            <div id="authAlerts" role="status" aria-live="polite" aria-atomic="true"></div>
-            <p class="auth-lead">
-                <strong>Sign in to make your picks.</strong> Enter your email and we'll send a one-tap sign-in link. First time here? The same link gets you started — no password to create.
-            </p>
-            <form id="loginForm" class="auth-form">
-                <input
-                    type="email"
-                    id="emailInput"
-                    class="auth-form__input"
-                    placeholder="your@email.com"
-                    required
-                >
-                <button id="loginBtn" type="submit" class="btn auth-form__submit">Sign In with Email</button>
-            </form>
-            <!-- Revealed after a magic link is sent (see handleLogin): confirmation + a nod to the knockout fun -->
-            <div id="authConfirm" class="auth-confirm" hidden>
-                <p class="auth-confirm__copy">
-                    <strong>Check your email — your sign-in link is on the way.</strong> Open it on this same device &amp; browser (a different or incognito browser can't finish signing you in). No email? Give it a minute and check spam. Still nothing? Try a non-UAlberta address like Gmail.
-                </p>
-                <p class="auth-confirm__help">
-                    <button id="loginHelpBtn" type="button" class="btn btn-ghost auth-confirm__help-btn">
-                        Didn't get the email? Notify the organizer
+        <!-- Auth Section: Swiss 2-col on desktop; offset pitch on tablet; frame hidden on phones -->
+        <div id="authSection" class="login-hero">
+            <div class="login-hero__content">
+                <h2 class="login-hero__headline">Try your hand at predicting the group stage order and eventual tournament winners.</h2>
+                <p class="login-hero__subline">Share your picks with the rest of the Digital + Creative team.</p>
+                <!-- Single in-place status for the sign-in screen (the bracket screen has its own messages rail) -->
+                <div id="authAlerts" role="status" aria-live="polite" aria-atomic="true"></div>
+                <div class="login-hero__cta">
+                    <p class="auth-lead">
+                        <strong>Sign in to make your picks.</strong> Enter your email and we'll send a one-tap sign-in link. First time here? The same link gets you started — no password to create.
+                    </p>
+                    <form id="loginForm" class="auth-form">
+                    <input
+                        type="email"
+                        id="emailInput"
+                        class="auth-form__input"
+                        placeholder="Sign in with email"
+                        required
+                    >
+                    <button id="loginBtn" type="submit" class="auth-form__submit" aria-label="Send sign-in link">
+                        <svg class="auth-form__submit-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path fill="currentColor" d="M4 11h11.17l-3.58-3.59L13 6l6 6-6 6-1.41-1.41L15.17 13H4v-2z" />
+                        </svg>
                     </button>
-                    <span id="loginHelpStatus" class="auth-confirm__help-status" role="status" aria-live="polite"></span>
-                </p>
-                <!-- Honeypot for bots; kept off-screen (not type=hidden, so naive bots still fill it) -->
-                <label class="auth-confirm__honeypot" aria-hidden="true">
-                    <span>Website</span>
-                    <input id="loginHelpHoneypot" type="text" name="website" tabindex="-1" autocomplete="off">
-                </label>
-                <figure class="auth-confirm__meme">
-                    <img src="/dembele-serious-business.jpg" alt="Ousmane Dembélé grinning: the serious business is about to start" loading="lazy">
-                    <figcaption>The serious business is about to start.</figcaption>
-                </figure>
+                </form>
+                </div>
+            </div>
+            <div id="loginHeroFrame" class="login-hero__frame" aria-hidden="true">
+                <svg class="login-hero__markings" viewBox="0 0 105 68" preserveAspectRatio="none" aria-hidden="true">
+                    <rect x="1" y="1" width="103" height="66" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.6" />
+                    <line x1="52.5" y1="1" x2="52.5" y2="67" stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
+                    <circle cx="52.5" cy="34" r="9.15" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
+                    <circle cx="52.5" cy="34" r="0.6" fill="rgba(255,255,255,0.9)" />
+                    <rect x="1" y="14" width="16.5" height="40" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.45" />
+                    <rect x="87.5" y="14" width="16.5" height="40" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.45" />
+                </svg>
+                <div class="login-hero__stage">
+                    <div class="login-hero__players" aria-hidden="true"></div>
+                    <span class="login-hero__scorer login-hero__scorer--hidden" aria-hidden="true">🐻</span>
+                    <span class="login-hero__ball" aria-hidden="true">⚽</span>
+                </div>
             </div>
         </div>
 
@@ -194,6 +196,40 @@
             <div class="modal__foot">
                 <button type="button" class="btn btn-ghost" data-close-select>Cancel</button>
                 <button id="selectApplyBtn" type="button" class="btn btn-primary">Fill in the blanks</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Magic-link sent: check-email confirmation (opens after OTP send) -->
+    <div id="authConfirmModal" class="modal" hidden>
+        <div class="modal__backdrop" data-close-auth></div>
+        <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="authConfirmTitle" tabindex="-1">
+            <div class="modal__head">
+                <h2 id="authConfirmTitle">Check your email</h2>
+                <button type="button" class="modal__close" data-close-auth aria-label="Close">&times;</button>
+            </div>
+            <div class="modal__body auth-confirm">
+                <p class="auth-confirm__copy">
+                    <strong>Your sign-in link is on the way.</strong> Open it on this same device &amp; browser (a different or incognito browser can't finish signing you in). No email? Give it a minute and check spam. Still nothing? Try a non-UAlberta address like Gmail.
+                </p>
+                <p class="auth-confirm__help">
+                    <button id="loginHelpBtn" type="button" class="btn btn-ghost auth-confirm__help-btn">
+                        Didn't get the email? Notify the organizer
+                    </button>
+                    <span id="loginHelpStatus" class="auth-confirm__help-status" role="status" aria-live="polite"></span>
+                </p>
+                <!-- Honeypot for bots; kept off-screen (not type=hidden, so naive bots still fill it) -->
+                <label class="auth-confirm__honeypot" aria-hidden="true">
+                    <span>Website</span>
+                    <input id="loginHelpHoneypot" type="text" name="website" tabindex="-1" autocomplete="off">
+                </label>
+                <figure class="auth-confirm__meme">
+                    <img src="/dembele-serious-business.jpg" alt="Ousmane Dembélé grinning: the serious business is about to start" loading="lazy">
+                    <figcaption>The serious business is about to start.</figcaption>
+                </figure>
+            </div>
+            <div class="modal__foot">
+                <button type="button" class="btn btn-primary" data-close-auth>Got it</button>
             </div>
         </div>
     </div>

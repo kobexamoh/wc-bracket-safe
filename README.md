@@ -80,8 +80,15 @@ The last thing missing was a sense of occasion. Hitting **Submit** worked, but i
 ## IX. In Which the Flags Stop Depending on Your Operating System
 The flags had been Unicode emoji all along, which works beautifully right up until someone opens the bracket on Windows — where several quietly degrade into letter-boxed country codes, and England and Scotland (which lean on subdivision emoji) turn into plain black rectangles.
 - **Real flag images, served from home.** Every team now renders a self-hosted SVG flag — the same forty-eight files for everyone, shipped with the app instead of borrowed from whatever each operating system happens to draw. They look identical on Windows, macOS, a phone, or in a screenshot.
-- **The export came along for free.** Because the downloadable card renders through the very same code, the PNG gets the real flags too — with a small guard that waits for every flag to finish loading before the picture is taken, so none come out blank.
+- **The export needed a second pass.** The live UI keeps crisp SVG flags, but the downloadable card uses raster PNGs at build time so html2canvas draws them identically on every engine — including iOS WebKit, which mis-sizes SVGs in canvas.
 - **Honest about the edges.** England and Scotland map to their proper subdivision flags, the whole mapping is covered by tests (including a check that every flag file actually exists on disk), and only the forty-eight flags in use are committed — not the library's other two hundred.
+
+## X. In Which the Sign-In Screen Grows a Hero
+The login page had been a narrow form floating in grey space. It deserved the same care as the bracket screen.
+- **A Swiss two-column hero.** On desktop, a bold headline and sign-in row breathe on the left; on the right, a miniature pitch with bears in a 4-3-3 facing pandas in a 4-2-3-1, and a ball bouncing between them. On tablet the pitch drifts to the bottom-right (~5 o'clock) so the copy owns the page; on phones the pitch hides so the email field stays above the fold.
+- **Magic-link confirmation in a modal.** After you request a link, a check-email dialog opens (same accessible modal pattern as the help overlay) and leaves a slim persistent hint when you dismiss it.
+- **A Cursor-style submit.** Pill email field, navy round arrow button, warm cream page background — deliberate type hierarchy so the banner title doesn't fight the hero headline.
+- **Deferred delights.** Formation blurbs under the pitch and a Konami-code easter egg are scaffolded for hands-on practice sessions — the pitch, goals, and physics helpers are ready to wire up.
 
 ---
 
@@ -110,6 +117,7 @@ wc-bracket-safe/
 │   │   ├── bracketData.js  # the 48 teams, 12 groups, flag codes, renderer + randomizer
 │   │   ├── bracketStore.js # load / save / validate picks
 │   │   ├── celebrate.js    # lazy, brand-tinted confetti on submit (reduced-motion aware)
+│   │   ├── ballChase.js    # login-hero pitch animation (pure step + rAF mount)
 │   │   ├── draftStore.js   # local autosave drafts + restore logic
 │   │   ├── exportImage.js  # off-screen branded card → downloadable PNG
 │   │   └── sanitize.js     # input scrubbing + email redaction
@@ -230,7 +238,7 @@ Redeploy after saving env vars.
 
 **Privacy notes:** The Slack webhook URL and bearer secret never ship in the browser bundle. Bracket webhooks send only a user id + timestamp — look up the email in Supabase Auth if you need it. Login-help and Resend alerts include the recipient email because you need that to send a manual link. Keep the repo private and rotate secrets if a webhook URL ever leaks.
 
-Local `npm run dev` does **not** run the API route — use a Vercel preview deploy or `npx vercel dev` to test end-to-end.
+Local `npm run dev` proxies `/api/*` to production so login-help Slack alerts work on localhost (`http://localhost:3000` must be in `NOTIFY_ALLOWED_ORIGINS` on Production). Use a Vercel preview or `npx vercel dev` for full serverless testing.
 
 ---
 
@@ -243,6 +251,7 @@ The launch did exactly one thing well and saved the rest for daylight:
 - **Post-launch polish — shipped.** A single in-place status line, a how-it-works explainer, per-group clear, a full responsive pass for phones and tablets (Chapters VI–VII), and a safer **Select for me** that lets you fill only the blanks, re-roll selected groups, or replace everything (never overwriting your picks by surprise).
 - **A celebratory finish — shipped.** Submitting now gets a confirmation moment and a brief, reduced-motion-aware confetti burst in green and gold (Chapter VIII).
 - **Cross-platform flags — shipped.** Real self-hosted SVG flags replaced the emoji, so nothing falls back to letter-boxes on Windows — in the live UI and the screenshot alike (Chapter IX).
+- **Login hero — shipped (Chapter X).** Swiss sign-in layout, pitch mini-animation, auth-confirm modal, Cursor-style arrow submit, warm cream background.
 - **Phase 2** — the knockout rounds. Bracket-submit Slack alerts are wired (see **Admin alerts** above); login-help + Resend failure pings ship in the same notify endpoint.
 - **Phase 3** — a scoring engine and a leaderboard, so the per-round prizes have something to measure. *(This is the part I promised coworkers out loud before building it, which is the traditional order of operations.)*
 
