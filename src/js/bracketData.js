@@ -56,6 +56,11 @@ export function getAllFlagCodes() {
   return Object.values(GROUPS).flatMap((group) => group.teams.map((team) => FLAG_CODES[team]));
 }
 
+/** ISO / subdivision flag asset code for a team name (null when unknown). */
+export function getFlagCode(teamName) {
+  return FLAG_CODES[teamName] ?? null;
+}
+
 export function getGroupOrder() {
   return Object.keys(GROUPS);
 }

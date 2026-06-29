@@ -111,13 +111,28 @@
                     </div>
 
                     <div id="bracket"></div>
+                    <div id="knockout" hidden></div>
                 </div>
 
                 <aside class="bracket-side">
                     <!-- Messages / alerts: sticky on desktop, top on mobile. Also the
                          future home of the knockout "slide" nav. -->
+                    <nav class="side-nav" aria-label="Bracket stage">
+                        <button id="stageGroupsBtn" type="button" class="side-nav__btn side-nav__btn--active">Group Stage</button>
+                        <button id="stageKnockoutBtn" type="button" class="side-nav__btn">Knockout</button>
+                    </nav>
                     <div id="alerts" class="side-messages" role="status" aria-live="polite" aria-atomic="true"></div>
-                    <!-- TODO (Phase 2): knockout slide nav mounts here -->
+                    <section id="knockoutPanel" class="knockout-panel" hidden>
+                        <h3>Knockout rounds</h3>
+                        <p class="knockout-panel__hint">
+                            Pick which <strong>8 third-place teams</strong> advance, then we'll slot them into the Round of 32 using FIFA's official mapping.
+                        </p>
+                        <div id="thirdPlaceChooser" class="third-place-chooser"></div>
+                        <button id="applyThirdsBtn" type="button" class="btn btn-primary third-place-apply" disabled>
+                            Apply to Round of 32
+                        </button>
+                        <p class="third-place-note">Tip: this only uses your <strong>3rd place</strong> pick from each group.</p>
+                    </section>
                 </aside>
             </div>
 
