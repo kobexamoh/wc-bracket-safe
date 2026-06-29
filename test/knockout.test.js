@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { lookupAnnexCOpponents, buildRoundOf32Matches, buildKnockoutBracket, setWinner } from '../src/js/knockout.js';
+import { lookupAnnexCOpponents, buildRoundOf32Matches, buildKnockoutBracket, setWinner, applyWinnerPick, getPodiumPlacements } from '../src/js/knockout.js';
 import { renderKnockoutTree } from '../src/js/knockoutRender.js';
 
 function makePicksWithKnownThirds() {
@@ -98,14 +98,65 @@ test('knockout tree renders left/right halves with connectors and flags', () => 
   assert.match(html, /knockout-scroll/);
   assert.match(html, /bracket-half--left/);
   assert.match(html, /bracket-half--right/);
-  assert.match(html, /bracket-connector/);
+  assert.match(html, /bracket-pair/);
+  assert.match(html, /bracket-join/);
+  assert.match(html, /data-open-qf-help/);
+  assert.match(html, /bracket-round--final/);
   assert.match(html, /data-match="M74"/);
   assert.match(html, /data-match="M104"/);
+  assert.match(html, /data-match="M103"/);
   assert.match(html, /class="bracket-team__flag"/);
-  assert.match(html, /champion-display/);
+  assert.doesNotMatch(html, /bracket-connector/);
+  assert.doesNotMatch(html, /bracket-match__id/);
+  assert.doesNotMatch(html, /bracket-team__seed/);
+  assert.doesNotMatch(html, /champion-display/);
+  assert.match(html, /knockout-canvas/);
 });
 
-test('right half columns run SF inward to R32 on the outer edge', () => {
+test('semi-finals render in a horizontal row flanking the final', () => {
+  const picks = makePicksWithKnownThirds();
+  const qualifying = ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+  const bracket = buildKnockoutBracket(picks, qualifying, {});
+  const html = renderKnockoutTree(bracket, {});
+
+  assert.match(html, /bracket-center__final-row/);
+  const centerStart = html.indexOf('bracket-center__final-row');
+  const centerRow = html.slice(centerStart, html.indexOf('bracket-center__third'));
+  const m101 = centerRow.indexOf('data-match="M101"');
+  const m104 = centerRow.indexOf('data-match="M104"');
+  const m102 = centerRow.indexOf('data-match="M102"');
+  assert.ok(m101 >= 0 && m104 > m101 && m102 > m104, 'M101 | Final | M102 left-to-right');
+});
+
+test('third-place match seeds from semi-final losers', () => {
+  const picks = makePicksWithKnownThirds();
+  const qualifying = ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+  let winners = {};
+  winners = setWinner(winners, 'M101', 'A');
+  winners = setWinner(winners, 'M102', 'B');
+  const bracket = buildKnockoutBracket(picks, qualifying, winners);
+  assert.equal(bracket.thirdPlace[0].id, 'M103');
+  assert.equal(bracket.thirdPlace[0].a.seed, 'LM101');
+  assert.equal(bracket.thirdPlace[0].b.seed, 'LM102');
+});
+
+test('podium placements resolve champion, runner-up, and third-place picks', () => {
+  const picks = makePicksWithKnownThirds();
+  const qualifying = ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+  let winners = {};
+  winners = setWinner(winners, 'M101', 'A');
+  winners = setWinner(winners, 'M102', 'B');
+  winners = setWinner(winners, 'M104', 'A');
+  winners = setWinner(winners, 'M103', 'B');
+  const bracket = buildKnockoutBracket(picks, qualifying, winners);
+  const podium = getPodiumPlacements(bracket, winners);
+  assert.equal(podium.first, bracket.final[0].a.team);
+  assert.equal(podium.second, bracket.final[0].b.team);
+  assert.equal(podium.third, bracket.thirdPlace[0].b.team);
+  assert.equal(podium.fourth, bracket.thirdPlace[0].a.team);
+});
+
+test('right half columns run QF inward to R32 on the outer edge', () => {
   const picks = makePicksWithKnownThirds();
   const qualifying = ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
   const bracket = buildKnockoutBracket(picks, qualifying, {});
@@ -115,7 +166,45 @@ test('right half columns run SF inward to R32 on the outer edge', () => {
   assert.ok(rightStart >= 0, 'right half markup present');
   const titles = [...html.slice(rightStart).matchAll(/bracket-round__title">([^<]+)</g)]
     .map((m) => m[1])
-    .slice(0, 4);
-  assert.deepEqual(titles, ['Semi-finals', 'Quarter-finals', 'Round of 16', 'Round of 32']);
+    .slice(0, 3);
+  assert.deepEqual(titles, ['Quarter-finals', 'Round of 16', 'Round of 32']);
+});
+
+test('semi-finals render in the center strip flanking the final', () => {
+  const picks = makePicksWithKnownThirds();
+  const qualifying = ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+  const bracket = buildKnockoutBracket(picks, qualifying, {});
+  const html = renderKnockoutTree(bracket, {});
+
+  const centerStart = html.indexOf('bracket-center');
+  assert.ok(centerStart >= 0);
+  const centerHtml = html.slice(centerStart, html.indexOf('bracket-half--right'));
+  assert.match(centerHtml, /data-match="M101"/);
+  assert.match(centerHtml, /data-match="M102"/);
+  assert.match(centerHtml, /data-match="M104"/);
+  assert.match(centerHtml, /data-match="M103"/);
+  assert.doesNotMatch(centerHtml, /bracket-half--left/);
+});
+
+test('toggling a winner off clears downstream picks', () => {
+  const picks = makePicksWithKnownThirds();
+  const qualifying = ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+  let winners = {};
+  winners = setWinner(winners, 'M73', 'A');
+  winners = setWinner(winners, 'M75', 'B');
+  winners = setWinner(winners, 'M90', 'A');
+  winners = applyWinnerPick(winners, 'M73', 'A', picks, qualifying);
+  assert.equal(winners.M73, undefined);
+  assert.equal(winners.M90, undefined);
+});
+
+test('QF pairs use solo elbow layout without feed badges', () => {
+  const picks = makePicksWithKnownThirds();
+  const qualifying = ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+  const bracket = buildKnockoutBracket(picks, qualifying, {});
+  const html = renderKnockoutTree(bracket, {});
+
+  assert.match(html, /bracket-pair--solo/);
+  assert.doesNotMatch(html, /Feeds/);
 });
 

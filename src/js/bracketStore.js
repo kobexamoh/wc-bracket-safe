@@ -10,6 +10,66 @@
 
 import { getGroupOrder, getGroupTeamNames, MAX_RANK } from './bracketData.js';
 
+/** Reserved key inside the `picks` jsonb column for knockout-stage metadata. */
+export const KNOCKOUT_META_KEY = '__knockout';
+
+const KNOCKOUT_MATCH_RE = /^M(7[3-9]|8[0-9]|9[0-9]|10[0-4])$/;
+
+/**
+ * Validate knockout metadata stored alongside group picks.
+ * Shape: { winners: { [matchId]: 'A'|'B' }, thirdGroups: [groupCode, ...] }
+ */
+export function validateKnockoutMeta(meta) {
+  const out = { winners: {}, thirdGroups: [] };
+  if (!meta || typeof meta !== 'object') return out;
+
+  if (meta.winners && typeof meta.winners === 'object') {
+    for (const [matchId, side] of Object.entries(meta.winners)) {
+      if (KNOCKOUT_MATCH_RE.test(matchId) && (side === 'A' || side === 'B')) {
+        out.winners[matchId] = side;
+      }
+    }
+  }
+
+  if (Array.isArray(meta.thirdGroups)) {
+    const seen = new Set();
+    for (const code of meta.thirdGroups) {
+      const group = String(code).toUpperCase();
+      if (!getGroupOrder().includes(group) || seen.has(group)) continue;
+      seen.add(group);
+      out.thirdGroups.push(group);
+      if (out.thirdGroups.length >= 8) break;
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Split a raw `picks` jsonb payload into validated group picks + knockout meta.
+ */
+export function extractBracketPayload(raw) {
+  const picks = validatePicks(raw);
+  const knockout = validateKnockoutMeta(raw?.[KNOCKOUT_META_KEY]);
+  return { picks, knockout };
+}
+
+/**
+ * Merge group picks and knockout meta into the shape stored in `picks` jsonb.
+ */
+export function buildStoredPicks(picks, knockout = null) {
+  const clean = validatePicks(picks);
+  const meta = validateKnockoutMeta(knockout);
+  const hasWinners = Object.keys(meta.winners).length > 0;
+  const hasThirds = meta.thirdGroups.length > 0;
+  if (!hasWinners && !hasThirds) return clean;
+
+  const stored = { ...clean, [KNOCKOUT_META_KEY]: {} };
+  if (hasWinners) stored[KNOCKOUT_META_KEY].winners = meta.winners;
+  if (hasThirds) stored[KNOCKOUT_META_KEY].thirdGroups = meta.thirdGroups;
+  return stored;
+}
+
 /**
  * Keep only legitimate picks: real teams for that group, no duplicates, capped
  * at MAX_RANK, original order preserved. Anything else is silently dropped so a
@@ -54,7 +114,8 @@ export async function loadBracketRow(supabase, userId) {
     .maybeSingle();
 
   if (error) throw error;
-  return { picks: validatePicks(data?.picks ?? {}), updatedAt: data?.updated_at ?? null };
+  const { picks, knockout } = extractBracketPayload(data?.picks ?? {});
+  return { picks, knockout, updatedAt: data?.updated_at ?? null };
 }
 
 /**
@@ -67,25 +128,35 @@ export async function loadPicks(supabase, userId) {
 }
 
 /**
+ * Load knockout metadata from the user's saved bracket row.
+ */
+export async function loadKnockoutMeta(supabase, userId) {
+  const { knockout } = await loadBracketRow(supabase, userId);
+  return knockout;
+}
+
+/**
  * Upsert the user's bracket. Returns the cleaned picks that were persisted plus
  * the `updatedAt` timestamp that was written (so callers can track which DB
  * version they are now in sync with). RLS guarantees a user can only ever write
  * their own row.
  */
-export async function savePicks(supabase, userId, picks) {
+export async function savePicks(supabase, userId, picks, knockout = null) {
   if (!supabase) throw new Error('Supabase client is required');
   if (!userId) throw new Error('You must be signed in to save');
 
-  const clean = validatePicks(picks);
+  const stored = buildStoredPicks(picks, knockout);
+  const clean = validatePicks(stored);
+  const cleanKnockout = validateKnockoutMeta(stored[KNOCKOUT_META_KEY]);
   const updatedAt = new Date().toISOString();
 
   const { error } = await supabase
     .from('brackets')
     .upsert(
-      { user_id: userId, picks: clean, updated_at: updatedAt },
+      { user_id: userId, picks: stored, updated_at: updatedAt },
       { onConflict: 'user_id' }
     );
 
   if (error) throw error;
-  return { picks: clean, updatedAt };
+  return { picks: clean, knockout: cleanKnockout, updatedAt };
 }

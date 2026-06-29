@@ -28,7 +28,7 @@ test('draftKey namespaces by user id', () => {
 
 test('saveDraft + readDraft round-trips picks and metadata', () => {
   const storage = makeStorage();
-  const ok = saveDraft(storage, 'user-1', { A: ['Mexico', 'South Africa'] }, 'ts-1', 1234);
+  const ok = saveDraft(storage, 'user-1', { A: ['Mexico', 'South Africa'] }, 'ts-1', null, 1234);
 
   assert.equal(ok, true);
   const draft = readDraft(storage, 'user-1');

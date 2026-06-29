@@ -5,12 +5,14 @@ import {
   formatSlackBracket,
   formatSlackEmailFailure,
   formatSlackLoginHelp,
+  groupPicksFingerprint,
   isAllowedOrigin,
   originFromVercelHost,
   parseResendFailureEvent,
   vercelAutoOrigins,
   parseSupabaseBracketEvent,
   sanitizeNotifyEmail,
+  shouldNotifyBracketWebhook,
   verifyBearerSecret,
 } from '../lib/notifyUtils.js';
 
@@ -93,14 +95,49 @@ describe('parseSupabaseBracketEvent', () => {
       action: 'submitted',
       userId: 'abc-123',
       updatedAt: '2026-06-27T12:00:00Z',
+      notify: true,
     });
 
     const update = parseSupabaseBracketEvent({
       type: 'UPDATE',
       table: 'brackets',
-      record: { user_id: 'abc-123', updated_at: '2026-06-27T13:00:00Z' },
+      record: {
+        user_id: 'abc-123',
+        updated_at: '2026-06-27T13:00:00Z',
+        picks: { A: ['Mexico', 'South Africa'] },
+      },
+      old_record: {
+        user_id: 'abc-123',
+        picks: { A: ['Mexico'] },
+      },
     });
     assert.equal(update?.action, 'updated');
+    assert.equal(update?.notify, true);
+  });
+
+  it('skips Slack when only knockout metadata changed', () => {
+    const groupOnly = { A: ['Mexico', 'South Africa'] };
+    const event = parseSupabaseBracketEvent({
+      type: 'UPDATE',
+      table: 'brackets',
+      record: {
+        user_id: 'abc-123',
+        updated_at: '2026-06-27T14:00:00Z',
+        picks: {
+          ...groupOnly,
+          __knockout: { winners: { M97: 'A' }, thirdGroups: ['A', 'B'] },
+        },
+      },
+      old_record: {
+        user_id: 'abc-123',
+        picks: groupOnly,
+      },
+    });
+    assert.equal(event?.notify, false);
+  });
+
+  it('shouldNotifyBracketWebhook treats INSERT as notify', () => {
+    assert.equal(shouldNotifyBracketWebhook('INSERT', { picks: {} }, null), true);
   });
 
   it('ignores unrelated tables', () => {

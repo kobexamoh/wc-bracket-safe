@@ -151,6 +151,11 @@ async function handleBracketWebhook(req, res, body) {
     return;
   }
 
+  if (!event.notify) {
+    json(res, 200, { ok: true, ignored: true, reason: 'knockout_only' });
+    return;
+  }
+
   await postToSlack(readEnv('SLACK_WEBHOOK_URL'), formatSlackBracket(event));
   json(res, 200, { ok: true });
 }
