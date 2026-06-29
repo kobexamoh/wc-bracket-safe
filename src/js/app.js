@@ -15,6 +15,7 @@ import { renderBracket, getGroupOrder, getGroupTeamNames, randomPicks, fillBlank
 import { loadBracketRow, savePicks } from './bracketStore.js';
 import { downloadBracketImage } from './exportImage.js';
 import { celebrate } from './celebrate.js';
+import { mountBallChase } from './ballChase.js';
 import { saveDraft, readDraft, clearDraft, shouldRestoreDraft } from './draftStore.js';
 import { isOtpCooldownActive, formatCooldownSeconds } from './authUtils.js';
 import { config } from '../config/supabase.js';
@@ -136,17 +137,19 @@ function showAlert(message, type = 'info', options = {}) {
 }
 
 function showAuthSection() {
-  document.getElementById('authSection').style.display = 'block';
+  document.getElementById('authSection').style.display = 'grid';
   document.getElementById('bracketSection').style.display = 'none';
   const headerActions = document.getElementById('headerActions');
   if (headerActions) headerActions.style.display = 'none'; // Sign Out hidden when logged out
   const headerTagline = document.getElementById('headerTagline');
   if (headerTagline) headerTagline.style.display = 'none'; // tagline lives in the grey area on the sign-in screen
-  if (authConfirm) authConfirm.hidden = true; // reset the post-send confirmation
+  closeAuthConfirmModal({ showHint: false });
   if (loginHelpStatus) loginHelpStatus.textContent = '';
+  startBallChase();
 }
 
 function showBracketSection() {
+  stopBallChase();
   document.getElementById('authSection').style.display = 'none';
   document.getElementById('bracketSection').style.display = 'block';
   const headerActions = document.getElementById('headerActions');
@@ -169,11 +172,30 @@ const selectGroupsGrid = document.getElementById('selectGroupsGrid');
 const selectRememberCheckbox = document.getElementById('selectRemember');
 const successModal = document.getElementById('successModal');
 const successScreenshotBtn = document.getElementById('successScreenshotBtn');
-const authConfirm = document.getElementById('authConfirm');
+const authConfirmModal = document.getElementById('authConfirmModal');
 const loginHelpBtn = document.getElementById('loginHelpBtn');
 const loginHelpStatus = document.getElementById('loginHelpStatus');
 const loginHelpHoneypot = document.getElementById('loginHelpHoneypot');
+const loginHeroFrame = document.getElementById('loginHeroFrame');
 const HELP_SEEN_KEY = 'wc-bracket:seen-help';
+
+const AUTH_SENT_HINT =
+  'Check your email — open the sign-in link on this same device and browser.';
+
+let unmountBallChase = null;
+
+function startBallChase() {
+  if (!loginHeroFrame) return;
+  stopBallChase();
+  unmountBallChase = mountBallChase(loginHeroFrame);
+}
+
+function stopBallChase() {
+  if (unmountBallChase) {
+    unmountBallChase();
+    unmountBallChase = null;
+  }
+}
 
 // "Select for me" chooser: the choice remembered for this signed-in session
 // (only 'blanks' or 'all'; the one-off 'selected' is never remembered). Cleared
@@ -263,6 +285,15 @@ function closeModal(modalEl) {
   lastFocusedBeforeModal = null;
   activeModal = null;
   activeModalDialog = null;
+}
+
+/** Close the post-send auth dialog; optionally leave a one-line hint in #authAlerts. */
+function closeAuthConfirmModal({ showHint = true } = {}) {
+  if (!authConfirmModal || authConfirmModal.hidden) return;
+  closeModal(authConfirmModal);
+  if (showHint) {
+    showAlert(AUTH_SENT_HINT, 'info', { persist: true });
+  }
 }
 
 // Auto-open the how-it-works explainer once per browser, the first time the
@@ -617,7 +648,8 @@ async function handleLogin(e) {
 
   if (loginBtn) {
     loginBtn.disabled = true;
-    loginBtn.textContent = 'Sending…';
+    loginBtn.setAttribute('aria-busy', 'true');
+    loginBtn.classList.add('auth-form__submit--sending');
   }
 
   try {
@@ -635,10 +667,9 @@ async function handleLogin(e) {
 
     otpLastSentAt = Date.now();
     lastLoginEmail = sanitized;
-    // Reveal the persistent confirmation (with the knockout-teaser meme) rather
-    // than a transient toast; clear any prior error so only the confirmation shows.
+    // Open the check-email dialog (keeps the hero pitch visible behind it).
     clearAllAlerts();
-    if (authConfirm) authConfirm.hidden = false;
+    openModal(authConfirmModal);
     document.getElementById('emailInput').value = '';
   } catch (err) {
     console.error('Login error:', err);
@@ -646,7 +677,8 @@ async function handleLogin(e) {
   } finally {
     if (loginBtn) {
       loginBtn.disabled = false;
-      loginBtn.textContent = 'Sign In with Email';
+      loginBtn.removeAttribute('aria-busy');
+      loginBtn.classList.remove('auth-form__submit--sending');
     }
   }
 }
@@ -676,6 +708,14 @@ async function handleLoginHelp() {
     if (res.status === 429) {
       if (loginHelpStatus) {
         loginHelpStatus.textContent = 'Please wait a bit before asking again.';
+      }
+      return;
+    }
+
+    if (res.status === 403) {
+      if (loginHelpStatus) {
+        loginHelpStatus.textContent =
+          'Could not send from this browser origin. Try the live site or a Vercel preview.';
       }
       return;
     }
@@ -818,6 +858,13 @@ if (helpBtn) helpBtn.addEventListener('click', () => openModal(helpModal));
 if (helpModal) {
   helpModal.querySelectorAll('[data-close-help]').forEach((el) => {
     el.addEventListener('click', () => closeModal(helpModal));
+  });
+}
+
+// Magic-link sent: close via ×, Got it, or backdrop; leave a slim hint in #authAlerts.
+if (authConfirmModal) {
+  authConfirmModal.querySelectorAll('[data-close-auth]').forEach((el) => {
+    el.addEventListener('click', () => closeAuthConfirmModal());
   });
 }
 
