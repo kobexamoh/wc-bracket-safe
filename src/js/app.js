@@ -15,7 +15,7 @@ import { renderBracket, getGroupOrder, getGroupTeamNames, randomPicks, fillBlank
 import { loadBracketRow, savePicks } from './bracketStore.js';
 import { downloadBracketImage } from './exportImage.js';
 import { celebrate } from './celebrate.js';
-import { getThirdPlaceCandidates, buildKnockoutBracket, setWinner } from './knockout.js';
+import { getThirdPlaceCandidates, buildKnockoutBracket, applyWinnerPick, getPodiumPlacements } from './knockout.js';
 import { renderKnockoutTree } from './knockoutRender.js';
 import { mountBallChase } from './ballChase.js';
 import { saveDraft, readDraft, clearDraft, shouldRestoreDraft } from './draftStore.js';
@@ -34,6 +34,7 @@ inject();
 let currentUser = null;
 let picks = {}; // { [groupCode]: [teamName, ...] } ordered 1st -> 4th
 let savedSnapshot = '{}'; // JSON of last persisted picks, for unsaved-change detection
+let savedKnockoutSnapshot = '{"winners":{},"thirdGroups":[]}';
 let loadedUserId = null; // guards against reloading (and clobbering unsaved picks) on tab refocus
 let loadedUpdatedAt = null; // DB row's updated_at we last synced with (a draft's base version)
 let otpLastSentAt = 0;
@@ -50,7 +51,9 @@ const draftStorage = (() => {
   }
 })();
 const DRAFT_DEBOUNCE_MS = 500;
+const KNOCKOUT_DEBOUNCE_MS = 1200;
 let draftTimer = null;
+let knockoutTimer = null;
 
 // The screenshot "Your name" field is persisted per user in localStorage
 // (reusing the guarded draftStorage handle) and defaults to the email's local part.
@@ -174,6 +177,10 @@ const selectGroupsGrid = document.getElementById('selectGroupsGrid');
 const selectRememberCheckbox = document.getElementById('selectRemember');
 const successModal = document.getElementById('successModal');
 const successScreenshotBtn = document.getElementById('successScreenshotBtn');
+const championModal = document.getElementById('championModal');
+const podiumList = document.getElementById('podiumList');
+const championScreenshotBtn = document.getElementById('championScreenshotBtn');
+const qfHelpModal = document.getElementById('qfHelpModal');
 const authConfirmModal = document.getElementById('authConfirmModal');
 const loginHelpBtn = document.getElementById('loginHelpBtn');
 const loginHelpStatus = document.getElementById('loginHelpStatus');
@@ -335,6 +342,20 @@ let activeStage = 'groups'; // 'groups' | 'knockout'
 let selectedThirdGroups = []; // 8 group letters
 let knockoutWinners = {}; // { [matchId]: 'A'|'B' }
 
+function currentKnockoutMeta() {
+  return { winners: knockoutWinners, thirdGroups: selectedThirdGroups };
+}
+
+function applyKnockoutMeta(meta = {}) {
+  knockoutWinners = meta.winners ? { ...meta.winners } : {};
+  selectedThirdGroups = Array.isArray(meta.thirdGroups) ? [...meta.thirdGroups] : [];
+  savedKnockoutSnapshot = JSON.stringify(currentKnockoutMeta());
+}
+
+function hasUnsavedKnockoutChanges() {
+  return JSON.stringify(currentKnockoutMeta()) !== savedKnockoutSnapshot;
+}
+
 function setSaveStatus(text) {
   if (saveStatusEl) saveStatusEl.textContent = text;
 }
@@ -420,6 +441,7 @@ function onThirdPlaceChooserChange(e) {
   }
   selectedThirdGroups = Array.from(next);
   syncThirdPlaceApply();
+  afterKnockoutChanged();
 }
 
 function renderKnockoutUI() {
@@ -444,6 +466,26 @@ function renderKnockoutUI() {
   if (newScrollEl && savedScrollLeft > 0) {
     newScrollEl.scrollLeft = savedScrollLeft;
   }
+}
+
+function openChampionModal() {
+  if (!championModal || !podiumList) return;
+  const bracket = buildKnockoutBracket(picks, selectedThirdGroups, knockoutWinners);
+  const podium = getPodiumPlacements(bracket, knockoutWinners);
+  const rows = [
+    ['1st place', podium.first],
+    ['2nd place', podium.second],
+    ['3rd place', podium.third],
+    ['4th place', podium.fourth],
+  ];
+  podiumList.innerHTML = rows
+    .map(([label, team]) => {
+      const value = team || '— (not picked yet)';
+      return `<li class="podium-list__item"><span class="podium-list__place">${label}</span><span class="podium-list__team">${value}</span></li>`;
+    })
+    .join('');
+  openModal(championModal);
+  celebrate();
 }
 
 // Click a team to assign the next finishing position; click a ranked team to
@@ -479,13 +521,55 @@ function flushDraft() {
   }
   if (!currentUser) return;
 
-  if (hasUnsavedChanges()) {
-    const ok = saveDraft(draftStorage, currentUser.id, picks, loadedUpdatedAt);
+  if (hasUnsavedChanges() || hasUnsavedKnockoutChanges()) {
+    const ok = saveDraft(
+      draftStorage,
+      currentUser.id,
+      picks,
+      loadedUpdatedAt,
+      currentKnockoutMeta(),
+    );
     setSaveStatus(ok ? 'Draft saved · not submitted' : 'Unsaved changes');
   } else {
     clearDraft(draftStorage, currentUser.id);
     setSaveStatus('');
   }
+}
+
+function scheduleKnockoutSave() {
+  if (knockoutTimer) clearTimeout(knockoutTimer);
+  knockoutTimer = setTimeout(flushKnockoutSave, KNOCKOUT_DEBOUNCE_MS);
+}
+
+async function flushKnockoutSave() {
+  if (knockoutTimer) {
+    clearTimeout(knockoutTimer);
+    knockoutTimer = null;
+  }
+  if (!currentUser || hasUnsavedChanges()) return;
+  if (!hasUnsavedKnockoutChanges()) return;
+
+  try {
+    const saved = await savePicks(supabase, currentUser.id, picks, currentKnockoutMeta());
+    savedKnockoutSnapshot = JSON.stringify(saved.knockout);
+    loadedUpdatedAt = saved.updatedAt;
+    setSaveStatus('Knockout saved ✓');
+  } catch (err) {
+    console.error('Knockout save error:', err);
+    setSaveStatus('Knockout not saved');
+  }
+}
+
+function afterKnockoutChanged() {
+  renderKnockoutUI();
+  if (!currentUser) return;
+  if (hasUnsavedChanges()) {
+    setSaveStatus('Saving draft…');
+    scheduleDraftSave();
+    return;
+  }
+  setSaveStatus('Saving knockout…');
+  scheduleKnockoutSave();
 }
 
 // Shared post-change routine: re-render, reflect draft status, and autosave.
@@ -536,6 +620,7 @@ function handleDeselectAll() {
   if (!Object.keys(picks).length) return;
   if (!window.confirm('Clear all your picks?')) return;
   picks = {};
+  applyKnockoutMeta({});
   afterPicksChanged();
 }
 
@@ -696,9 +781,10 @@ async function handleSave() {
   setSubmitButtons(true, 'Submitting…');
   setSaveStatus('Submitting…');
   try {
-    const saved = await savePicks(supabase, currentUser.id, picks);
+    const saved = await savePicks(supabase, currentUser.id, picks, currentKnockoutMeta());
     picks = saved.picks;
     savedSnapshot = JSON.stringify(picks);
+    savedKnockoutSnapshot = JSON.stringify(saved.knockout);
     loadedUpdatedAt = saved.updatedAt;
     clearDraft(draftStorage, currentUser.id); // DB is now the source of truth
     renderBracketUI();
@@ -847,10 +933,15 @@ async function handleLogout() {
       clearTimeout(draftTimer);
       draftTimer = null;
     }
+    if (knockoutTimer) {
+      clearTimeout(knockoutTimer);
+      knockoutTimer = null;
+    }
     if (currentUser) clearDraft(draftStorage, currentUser.id);
     currentUser = null;
     picks = {};
     savedSnapshot = '{}';
+    applyKnockoutMeta({});
     if (nameInput) nameInput.value = '';
     loadedUserId = null;
     loadedUpdatedAt = null;
@@ -894,25 +985,42 @@ if (stageKnockoutBtn) stageKnockoutBtn.addEventListener('click', () => setActive
 if (thirdPlaceChooser) thirdPlaceChooser.addEventListener('change', onThirdPlaceChooserChange);
 if (applyThirdsBtn) {
   applyThirdsBtn.addEventListener('click', () => {
-    renderKnockoutUI();
+    afterKnockoutChanged();
     showAlert('✅ Round of 32 updated from your third-place picks.', 'success');
   });
 }
 
 if (knockoutEl) {
   knockoutEl.addEventListener('click', (e) => {
+    if (e.target.closest('[data-open-qf-help]')) {
+      openModal(qfHelpModal);
+      return;
+    }
+
+    if (e.target.closest('#viewPodiumBtn')) {
+      openChampionModal();
+      return;
+    }
+
     const btn = e.target.closest('button[data-match][data-side]');
     if (!btn) return;
     const matchId = btn.dataset.match;
     const side = btn.dataset.side;
+    if (matchId === 'M103' && (!knockoutWinners.M101 || !knockoutWinners.M102)) return;
+
     const prevChampion = buildKnockoutBracket(picks, selectedThirdGroups, knockoutWinners)?.championTeam || null;
-    knockoutWinners = setWinner(knockoutWinners, matchId, side);
-    renderKnockoutUI();
+    knockoutWinners = applyWinnerPick(
+      knockoutWinners,
+      matchId,
+      side,
+      picks,
+      selectedThirdGroups,
+    );
+    afterKnockoutChanged();
 
     const nextChampion = buildKnockoutBracket(picks, selectedThirdGroups, knockoutWinners)?.championTeam || null;
     if (!prevChampion && nextChampion) {
-      celebrate();
-      showAlert(`🏆 You picked ${nextChampion} as champion!`, 'success', { duration: 9000 });
+      openChampionModal();
     }
   });
 }
@@ -935,8 +1043,9 @@ async function loadBracket() {
   renderBracketUI(); // show the interactive bracket immediately
 
   try {
-    const { picks: dbPicks, updatedAt } = await loadBracketRow(supabase, userId);
+    const { picks: dbPicks, knockout: dbKnockout, updatedAt } = await loadBracketRow(supabase, userId);
     picks = dbPicks;
+    applyKnockoutMeta(dbKnockout);
     savedSnapshot = JSON.stringify(picks);
     loadedUpdatedAt = updatedAt;
 
@@ -944,9 +1053,18 @@ async function loadBracket() {
     // loaded (the bracket wasn't saved from another device since). The DB
     // snapshot stays the baseline, so a restored draft reads as "not submitted".
     const draft = readDraft(draftStorage, userId);
-    if (shouldRestoreDraft(draft, updatedAt) && JSON.stringify(draft.picks) !== savedSnapshot) {
+    if (shouldRestoreDraft(draft, updatedAt) && (
+      JSON.stringify(draft.picks) !== savedSnapshot
+      || JSON.stringify(draft.knockout) !== savedKnockoutSnapshot
+    )) {
       picks = draft.picks;
+      applyKnockoutMeta(draft.knockout);
+      savedSnapshot = JSON.stringify(picks);
       renderBracketUI();
+      if (activeStage === 'knockout') {
+        renderThirdPlaceChooser();
+        renderKnockoutUI();
+      }
       setSaveStatus('Draft restored · not submitted');
       showAlert('↩️ Restored your unsaved draft (not submitted yet)', 'info');
     } else {
@@ -1026,13 +1144,29 @@ if (successScreenshotBtn) {
   });
 }
 
+if (championModal) {
+  championModal.querySelectorAll('[data-close-champion]').forEach((el) => {
+    el.addEventListener('click', () => closeModal(championModal));
+  });
+}
+
+if (qfHelpModal) {
+  qfHelpModal.querySelectorAll('[data-close-qf-help]').forEach((el) => {
+    el.addEventListener('click', () => closeModal(qfHelpModal));
+  });
+}
+
 // Flush a pending draft synchronously before the page is hidden or unloaded, so
 // a refresh inside the debounce window still persists the latest picks.
 window.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden' && draftTimer) flushDraft();
+  if (document.visibilityState === 'hidden') {
+    if (draftTimer) flushDraft();
+    if (knockoutTimer) flushKnockoutSave();
+  }
 });
 window.addEventListener('pagehide', () => {
   if (draftTimer) flushDraft();
+  if (knockoutTimer) flushKnockoutSave();
 });
 
 // Check authentication on page load

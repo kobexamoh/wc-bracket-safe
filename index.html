@@ -272,6 +272,47 @@
         </div>
     </div>
 
+    <!-- Knockout QF: why semi-finals cross the bracket -->
+    <div id="qfHelpModal" class="modal" hidden>
+        <div class="modal__backdrop" data-close-qf-help></div>
+        <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="qfHelpTitle" tabindex="-1">
+            <div class="modal__head">
+                <h2 id="qfHelpTitle">Heads up — the bracket crosses here</h2>
+                <button type="button" class="modal__close" data-close-qf-help aria-label="Close">&times;</button>
+            </div>
+            <div class="modal__body">
+                <p class="modal__lead">After the quarter-finals, winners do <strong>not</strong> stay on the same side of the screen. That is normal — it is not a bug.</p>
+                <ul class="success-list">
+                    <li><strong>What you will see:</strong> a quarter-final winner on the left can show up in a semi-final or final in the <em>center</em>, paired with a team that came from the right side.</li>
+                    <li><strong>Why FIFA does it:</strong> so teams from the same original side of the draw cannot meet again until the final (if both keep winning).</li>
+                    <li><strong>How to pick:</strong> click a team to advance; click again to undo. Clearing an early match also clears later rounds that depended on it.</li>
+                </ul>
+            </div>
+            <div class="modal__foot">
+                <button type="button" class="btn btn-primary" data-close-qf-help>Got it — keep picking</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Knockout podium: champion + medal picks (opens when the final is decided) -->
+    <div id="championModal" class="modal" hidden>
+        <div class="modal__backdrop" data-close-champion></div>
+        <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="championTitle" tabindex="-1">
+            <div class="modal__head">
+                <h2 id="championTitle">Your knockout podium</h2>
+                <button type="button" class="modal__close" data-close-champion aria-label="Close">&times;</button>
+            </div>
+            <div class="modal__body">
+                <p class="modal__lead">Here's how your bracket finishes. Pick the third-place match on the bracket if you haven't yet.</p>
+                <ol id="podiumList" class="podium-list"></ol>
+            </div>
+            <div class="modal__foot">
+                <button type="button" class="btn btn-ghost" data-close-champion>Back to bracket</button>
+                <button type="button" id="championScreenshotBtn" class="btn btn-primary" disabled title="Knockout screenshot export coming soon">Screenshot podium (soon)</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Floating feedback / bug affordance (bottom-right, global so it shows on the sign-in screen too) -->
     <a id="feedbackLink" class="feedback-fab" href="mailto:feedback@kobexamoh.me?subject=WC%20Bracket%20Pool%20feedback" title="Report a bug or send feedback">Report a bug</a>
 

@@ -11,15 +11,16 @@
  * real browser. Every access is wrapped so private-mode / quota errors fail
  * quietly instead of breaking the app.
  *
- * Stored shape: { picks, baseUpdatedAt, updatedAt }
+ * Stored shape: { picks, knockout, baseUpdatedAt, updatedAt }
  *   - picks:        validated { [groupCode]: [teamName, ...] }
+ *   - knockout:     validated { winners, thirdGroups } (knockout-stage picks)
  *   - baseUpdatedAt: the DB row's `updated_at` when editing began (the version
  *                    this draft was based on). Used to decide, on load, whether
  *                    the draft is still safe to restore.
  *   - updatedAt:    when the draft itself was written (client time; advisory).
  */
 
-import { validatePicks } from './bracketStore.js';
+import { validatePicks, validateKnockoutMeta } from './bracketStore.js';
 
 const DRAFT_PREFIX = 'wc-bracket-draft:';
 
@@ -32,11 +33,12 @@ export function draftKey(userId) {
  * never poison the UI. Returns false (instead of throwing) when storage is
  * unavailable or full, so callers can fall back gracefully.
  */
-export function saveDraft(storage, userId, picks, baseUpdatedAt = null, now = Date.now()) {
+export function saveDraft(storage, userId, picks, baseUpdatedAt = null, knockout = null, now = Date.now()) {
   if (!storage || !userId) return false;
   try {
     const payload = JSON.stringify({
       picks: validatePicks(picks),
+      knockout: validateKnockoutMeta(knockout),
       baseUpdatedAt: baseUpdatedAt ?? null,
       updatedAt: now,
     });
@@ -59,10 +61,13 @@ export function readDraft(storage, userId) {
 
     const parsed = JSON.parse(raw);
     const picks = validatePicks(parsed?.picks);
-    if (Object.keys(picks).length === 0) return null;
+    const knockout = validateKnockoutMeta(parsed?.knockout);
+    if (Object.keys(picks).length === 0 && Object.keys(knockout.winners).length === 0
+      && knockout.thirdGroups.length === 0) return null;
 
     return {
       picks,
+      knockout,
       baseUpdatedAt: parsed?.baseUpdatedAt ?? null,
       updatedAt: parsed?.updatedAt ?? null,
     };

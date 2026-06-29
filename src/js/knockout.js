@@ -193,20 +193,26 @@ export const BRACKET_LAYOUT = {
   left: {
     r32: ['M74', 'M77', 'M73', 'M75', 'M76', 'M78', 'M79', 'M80'],
     r16: ['M89', 'M90', 'M91', 'M92'],
-    qf: ['M97', 'M99'],
-    sf: ['M101'],
+    // Each QF feeds its cross-bracket semi-final (Art. 12.9), not the same-side pair.
+    qf: [
+      { match: 'M97', feeds: 'M101' },
+      { match: 'M99', feeds: 'M102' },
+    ],
   },
   right: {
     r32: ['M84', 'M83', 'M82', 'M81', 'M86', 'M88', 'M87', 'M85'],
     r16: ['M93', 'M94', 'M95', 'M96'],
-    qf: ['M98', 'M100'],
-    sf: ['M102'],
+    qf: [
+      { match: 'M98', feeds: 'M101' },
+      { match: 'M100', feeds: 'M102' },
+    ],
+  },
+  center: {
+    sf: ['M101', 'M102'],
   },
   feeds: {
     r32: ['M89', 'M90', 'M91', 'M92', 'M93', 'M94', 'M95', 'M96'],
     r16: ['M97', 'M99', 'M98', 'M100'],
-    qf: ['M101', 'M102'],
-    sf: ['M104', 'M104'],
   },
 };
 
@@ -296,7 +302,68 @@ export function buildKnockoutBracket(picks = {}, qualifyingThirdGroups = [], win
   const finalWinner = winnerOf(winners, 'M104');
   const championTeam = finalWinner ? (finalWinner === 'A' ? final[0].a.team : final[0].b.team) : null;
 
-  return { r32, r16, qf, sf, final, championTeam };
+  const loserFrom = (matchId) => {
+    const m = sfById[matchId] || null;
+    if (!m) return { seed: `L${matchId}`, team: null };
+    const w = winnerOf(winners, matchId);
+    if (!w) return { seed: `L${matchId}`, team: null };
+    return { seed: `L${matchId}`, team: w === 'A' ? m.b.team : m.a.team };
+  };
+
+  const thirdPlace = [
+    {
+      id: 'M103',
+      a: loserFrom('M101'),
+      b: loserFrom('M102'),
+    },
+  ];
+
+  const thirdPlaceWinner = winnerOf(winners, 'M103');
+  const thirdPlaceTeam = thirdPlaceWinner
+    ? (thirdPlaceWinner === 'A' ? thirdPlace[0].a.team : thirdPlace[0].b.team)
+    : null;
+
+  return { r32, r16, qf, sf, final, thirdPlace, championTeam, thirdPlaceTeam };
+}
+
+export function findMatchInBracket(bracket, matchId) {
+  for (const key of ['r32', 'r16', 'qf', 'sf', 'final', 'thirdPlace']) {
+    const found = (bracket[key] || []).find((m) => m.id === matchId);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
+ * Drop winner picks for matches that no longer have both teams set (e.g. after
+ * clearing an upstream R32 pick). Repeats until stable so downstream clears cascade.
+ */
+export function pruneStaleWinners(winners = {}, picks = {}, qualifyingThirdGroups = []) {
+  let next = { ...winners };
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const bracket = buildKnockoutBracket(picks, qualifyingThirdGroups, next);
+    for (const matchId of Object.keys(next)) {
+      const match = findMatchInBracket(bracket, matchId);
+      if (!match || !match.a.team || !match.b.team) {
+        delete next[matchId];
+        changed = true;
+      }
+    }
+  }
+  return next;
+}
+
+/**
+ * Pick or toggle off a knockout winner. Clicking the same side again clears that
+ * match and any downstream picks that depended on it.
+ */
+export function applyWinnerPick(winners = {}, matchId, side, picks = {}, qualifyingThirdGroups = []) {
+  const next = { ...winners };
+  if (next[matchId] === side) delete next[matchId];
+  else next[matchId] = side;
+  return pruneStaleWinners(next, picks, qualifyingThirdGroups);
 }
 
 export function setWinner(winners = {}, matchId, side) {
@@ -308,5 +375,26 @@ export function setWinner(winners = {}, matchId, side) {
   }
   next[matchId] = side;
   return next;
+}
+
+/**
+ * Podium placements from knockout winner picks (null when not yet picked).
+ */
+export function getPodiumPlacements(bracket, winners = {}) {
+  const final = bracket.final?.[0];
+  const third = bracket.thirdPlace?.[0];
+  if (!final) {
+    return { first: null, second: null, third: null, fourth: null };
+  }
+
+  const fw = winnerOf(winners, 'M104');
+  const tw = winnerOf(winners, 'M103');
+
+  return {
+    first: fw ? (fw === 'A' ? final.a.team : final.b.team) : null,
+    second: fw ? (fw === 'A' ? final.b.team : final.a.team) : null,
+    third: tw && third ? (tw === 'A' ? third.a.team : third.b.team) : null,
+    fourth: tw && third ? (tw === 'A' ? third.b.team : third.a.team) : null,
+  };
 }
 
