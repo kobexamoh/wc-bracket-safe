@@ -89,7 +89,7 @@ test('final and champion resolve from semi-final winners', () => {
   assert.equal(bracket.championTeam, bracket.final[0].b.team);
 });
 
-test('knockout tree renders left/right halves with connectors and flags', () => {
+test('knockout tree renders left/right halves with flags (connectors deferred)', () => {
   const picks = makePicksWithKnownThirds();
   const qualifying = ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
   const bracket = buildKnockoutBracket(picks, qualifying, {});
@@ -99,14 +99,15 @@ test('knockout tree renders left/right halves with connectors and flags', () => 
   assert.match(html, /bracket-half--left/);
   assert.match(html, /bracket-half--right/);
   assert.match(html, /bracket-pair/);
-  assert.match(html, /bracket-join/);
   assert.match(html, /data-open-qf-help/);
   assert.match(html, /bracket-round--final/);
   assert.match(html, /data-match="M74"/);
   assert.match(html, /data-match="M104"/);
   assert.match(html, /data-match="M103"/);
   assert.match(html, /class="bracket-team__flag"/);
+  assert.doesNotMatch(html, /bracket-join/);
   assert.doesNotMatch(html, /bracket-connector/);
+  assert.doesNotMatch(html, /Feeds/);
   assert.doesNotMatch(html, /bracket-match__id/);
   assert.doesNotMatch(html, /bracket-team__seed/);
   assert.doesNotMatch(html, /champion-display/);
@@ -198,13 +199,13 @@ test('toggling a winner off clears downstream picks', () => {
   assert.equal(winners.M90, undefined);
 });
 
-test('QF pairs use solo elbow layout without feed badges', () => {
+test('QF rounds use solo pair layout (one match per pair)', () => {
   const picks = makePicksWithKnownThirds();
   const qualifying = ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
   const bracket = buildKnockoutBracket(picks, qualifying, {});
   const html = renderKnockoutTree(bracket, {});
 
-  assert.match(html, /bracket-pair--solo/);
-  assert.doesNotMatch(html, /Feeds/);
+  const soloCount = (html.match(/bracket-pair--solo/g) || []).length;
+  assert.ok(soloCount >= 4, 'four solo QF pairs');
 });
 
