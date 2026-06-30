@@ -11,12 +11,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { inject } from '@vercel/analytics';
 import { sanitizeEmail, redactEmail } from './sanitize.js';
-import { renderBracket, getGroupOrder, getGroupTeamNames, randomPicks, fillBlankRanks, randomizeGroups, ADVANCE_COUNT } from './bracketData.js';
+import { renderBracket, getGroupOrder, getGroupTeamNames, getFlagCode, randomPicks, fillBlankRanks, randomizeGroups, ADVANCE_COUNT } from './bracketData.js';
 import { loadBracketRow, savePicks } from './bracketStore.js';
 import { downloadBracketImage } from './exportImage.js';
 import { celebrate } from './celebrate.js';
 import { getThirdPlaceCandidates, buildKnockoutBracket, applyWinnerPick, getPodiumPlacements } from './knockout.js';
 import { renderKnockoutTree } from './knockoutRender.js';
+import {
+  allGroupsRanked,
+  isThirdPlaceComplete,
+  getStageNavState,
+  STAGE_HEADER_LABELS,
+} from './stageNav.js';
 import { mountBallChase } from './ballChase.js';
 import { saveDraft, readDraft, clearDraft, shouldRestoreDraft } from './draftStore.js';
 import { isOtpCooldownActive, formatCooldownSeconds } from './authUtils.js';
@@ -161,6 +167,8 @@ function showBracketSection() {
   if (headerActions) headerActions.style.display = 'flex'; // Sign Out in the header when logged in
   const headerTagline = document.getElementById('headerTagline');
   if (headerTagline) headerTagline.style.display = 'block'; // small subtitle under the h1 once logged in
+  wasAllGroupsRanked = allGroupsRanked(picks);
+  setActiveStage('groups');
   maybeAutoOpenHelp(); // first-time onboarding overlay (once per browser)
 }
 
@@ -331,16 +339,20 @@ const progressBarEl = document.getElementById('progressBar');
 const saveBtnMobile = document.getElementById('saveBtnMobile');
 const progressTextElMobile = document.getElementById('progressTextMobile');
 
-// Knockout scaffolding: stage toggle + third-place chooser lives in the side rail.
-const stageGroupsBtn = document.getElementById('stageGroupsBtn');
-const stageKnockoutBtn = document.getElementById('stageKnockoutBtn');
-const knockoutPanel = document.getElementById('knockoutPanel');
-const thirdPlaceChooser = document.getElementById('thirdPlaceChooser');
-const applyThirdsBtn = document.getElementById('applyThirdsBtn');
+// Multi-screen stage flow: Group Stage → Third Place → Knockout (OG-style tabs).
+const bracketSection = document.getElementById('bracketSection');
+const bracketLayout = document.getElementById('bracketLayout');
+const stageNav = document.getElementById('stageNav');
+const headerStageLabel = document.getElementById('headerStageLabel');
+const thirdPlaceGrid = document.getElementById('thirdPlaceGrid');
+const thirdPlaceCounter = document.getElementById('thirdPlaceCounter');
 
-let activeStage = 'groups'; // 'groups' | 'knockout'
+const STAGE_AUTO_MS = 600;
+let activeStage = 'groups'; // 'groups' | 'third' | 'knockout'
 let selectedThirdGroups = []; // 8 group letters
 let knockoutWinners = {}; // { [matchId]: 'A'|'B' }
+let wasAllGroupsRanked = false;
+let stageAutoTimer = null;
 
 function currentKnockoutMeta() {
   return { winners: knockoutWinners, thirdGroups: selectedThirdGroups };
@@ -384,64 +396,135 @@ function renderBracketUI() {
   updateProgress();
 }
 
-function setActiveStage(stage) {
-  activeStage = stage === 'knockout' ? 'knockout' : 'groups';
-  if (stageGroupsBtn) stageGroupsBtn.classList.toggle('side-nav__btn--active', activeStage === 'groups');
-  if (stageKnockoutBtn) stageKnockoutBtn.classList.toggle('side-nav__btn--active', activeStage === 'knockout');
-  if (knockoutPanel) knockoutPanel.hidden = activeStage !== 'knockout';
-  if (bracketEl) bracketEl.hidden = activeStage !== 'groups';
-  if (knockoutEl) knockoutEl.hidden = activeStage !== 'knockout';
-  // The group-stage header/callout should only show while the group view is active.
-  const panelHeader = document.querySelector('.panel-header');
-  if (panelHeader) panelHeader.hidden = activeStage !== 'groups';
-  if (activeStage === 'knockout') {
-    renderThirdPlaceChooser();
-    renderKnockoutUI();
+function clearStageAutoTimer() {
+  if (stageAutoTimer) {
+    clearTimeout(stageAutoTimer);
+    stageAutoTimer = null;
   }
 }
 
-function renderThirdPlaceChooser() {
-  if (!thirdPlaceChooser) return;
+function scheduleStageAdvance(nextStage) {
+  clearStageAutoTimer();
+  stageAutoTimer = setTimeout(() => {
+    stageAutoTimer = null;
+    setActiveStage(nextStage);
+  }, STAGE_AUTO_MS);
+}
+
+function reconcileActiveStage() {
+  if (activeStage === 'third' && !allGroupsRanked(picks)) {
+    setActiveStage('groups');
+    return;
+  }
+  if (activeStage === 'knockout' && !isThirdPlaceComplete(selectedThirdGroups)) {
+    setActiveStage(allGroupsRanked(picks) ? 'third' : 'groups');
+  }
+}
+
+function updateStageNav() {
+  if (!stageNav) return;
+  const state = getStageNavState(picks, selectedThirdGroups, activeStage);
+  for (const btn of stageNav.querySelectorAll('[data-stage]')) {
+    const key = btn.dataset.stage;
+    const entry = state[key];
+    if (!entry) continue;
+    btn.classList.toggle('stage-btn--active', entry.active);
+    btn.classList.toggle('stage-btn--completed', entry.completed && !entry.active);
+    btn.classList.toggle('stage-btn--disabled', !!entry.disabled);
+    btn.disabled = !!entry.disabled;
+    btn.setAttribute('aria-current', entry.active ? 'step' : 'false');
+  }
+}
+
+function setActiveStage(stage) {
+  if (stage === 'third' && !allGroupsRanked(picks)) return;
+  if (stage === 'knockout' && !isThirdPlaceComplete(selectedThirdGroups)) return;
+
+  clearStageAutoTimer();
+  activeStage = stage === 'knockout' ? 'knockout' : stage === 'third' ? 'third' : 'groups';
+
+  if (bracketSection) {
+    bracketSection.classList.remove('is-stage-groups', 'is-stage-third', 'is-stage-knockout');
+    bracketSection.classList.add(`is-stage-${activeStage}`);
+  }
+  if (bracketLayout) {
+    bracketLayout.classList.toggle('bracket-layout--full', activeStage !== 'groups');
+  }
+  if (headerStageLabel) {
+    headerStageLabel.textContent = STAGE_HEADER_LABELS[activeStage] || STAGE_HEADER_LABELS.groups;
+  }
+
+  for (const panel of document.querySelectorAll('[data-stage-panel]')) {
+    panel.hidden = panel.dataset.stagePanel !== activeStage;
+  }
+
+  updateStageNav();
+
+  if (activeStage === 'third') renderThirdPlaceGrid();
+  if (activeStage === 'knockout') renderKnockoutUI();
+
+  window.scrollTo(0, 0);
+}
+
+function updateThirdPlaceCounter() {
+  if (!thirdPlaceCounter) return;
+  thirdPlaceCounter.textContent = `${selectedThirdGroups.length} / 8 selected`;
+}
+
+function escHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function renderThirdPlaceGrid() {
+  if (!thirdPlaceGrid) return;
   const candidates = getThirdPlaceCandidates(picks);
   const chosenSet = new Set(selectedThirdGroups);
-  thirdPlaceChooser.innerHTML = candidates
+  thirdPlaceGrid.innerHTML = candidates
     .map(({ group, team }) => {
-      const disabled = !team;
-      const checked = chosenSet.has(group);
+      if (!team) return '';
+      const selected = chosenSet.has(group);
+      const code = getFlagCode(team);
+      const flag = code
+        ? `<img class="third-place-card__flag team-flag" src="/flags/${code}.svg" alt="" width="28" height="21">`
+        : '';
       return `
-        <label class="third-place-item">
-          <input type="checkbox" value="${group}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
-          <span class="third-place-item__label">
-            <span class="third-place-item__meta">Group ${group} — 3rd</span>
-            <span class="third-place-item__team">${team ? team : '— (rank 3rd place first)'}</span>
-          </span>
-        </label>
+        <button
+          type="button"
+          class="third-place-card${selected ? ' is-selected' : ''}"
+          data-third-group="${group}"
+        >
+          ${flag}
+          <span class="third-place-card__name">${escHtml(team)}</span>
+          <span class="third-place-card__meta">Group ${group} · 3rd</span>
+          ${selected ? '<span class="third-place-card__check" aria-hidden="true">✓</span>' : ''}
+        </button>
       `;
     })
     .join('');
-  syncThirdPlaceApply();
+  updateThirdPlaceCounter();
 }
 
-function syncThirdPlaceApply() {
-  if (!applyThirdsBtn) return;
-  applyThirdsBtn.disabled = selectedThirdGroups.length !== 8;
-}
-
-function onThirdPlaceChooserChange(e) {
-  const cb = e.target.closest('input[type="checkbox"]');
-  if (!cb) return;
-  const group = cb.value;
-  const next = new Set(selectedThirdGroups);
-  if (cb.checked) next.add(group);
-  else next.delete(group);
-  // Cap at 8: if this would exceed 8, undo the check.
-  if (next.size > 8) {
-    cb.checked = false;
+function toggleThirdPlace(group) {
+  const prevLen = selectedThirdGroups.length;
+  const idx = selectedThirdGroups.indexOf(group);
+  if (idx > -1) {
+    selectedThirdGroups = selectedThirdGroups.filter((g) => g !== group);
+  } else if (selectedThirdGroups.length < 8) {
+    selectedThirdGroups = [...selectedThirdGroups, group];
+  } else {
     return;
   }
-  selectedThirdGroups = Array.from(next);
-  syncThirdPlaceApply();
+
+  renderThirdPlaceGrid();
+  updateStageNav();
   afterKnockoutChanged();
+
+  if (selectedThirdGroups.length === 8 && prevLen === 7) {
+    scheduleStageAdvance('knockout');
+  }
 }
 
 function renderKnockoutUI() {
@@ -451,7 +534,7 @@ function renderKnockoutUI() {
 
   if (selectedThirdGroups.length !== 8) {
     knockoutEl.innerHTML = `
-      <div class="alert info">Select exactly 8 third-place teams in the side panel to build the Round of 32.</div>
+      <div class="alert info">Select exactly 8 third-place teams on the <strong>Third Place</strong> tab to build the Round of 32.</div>
     `;
     return;
   }
@@ -562,6 +645,8 @@ async function flushKnockoutSave() {
 
 function afterKnockoutChanged() {
   renderKnockoutUI();
+  updateStageNav();
+  reconcileActiveStage();
   if (!currentUser) return;
   if (hasUnsavedChanges()) {
     setSaveStatus('Saving draft…');
@@ -577,10 +662,18 @@ function afterPicksChanged() {
   renderBracketUI();
   setSaveStatus(hasUnsavedChanges() ? 'Saving draft…' : '');
   scheduleDraftSave();
-  if (activeStage === 'knockout') {
-    renderThirdPlaceChooser();
-    renderKnockoutUI();
+
+  const nowAllRanked = allGroupsRanked(picks);
+  if (nowAllRanked && !wasAllGroupsRanked && activeStage === 'groups') {
+    scheduleStageAdvance('third');
   }
+  wasAllGroupsRanked = nowAllRanked;
+
+  updateStageNav();
+  reconcileActiveStage();
+
+  if (activeStage === 'third') renderThirdPlaceGrid();
+  if (activeStage === 'knockout') renderKnockoutUI();
 }
 
 function onBracketClick(e) {
@@ -621,6 +714,8 @@ function handleDeselectAll() {
   if (!window.confirm('Clear all your picks?')) return;
   picks = {};
   applyKnockoutMeta({});
+  wasAllGroupsRanked = false;
+  if (activeStage !== 'groups') setActiveStage('groups');
   afterPicksChanged();
 }
 
@@ -937,11 +1032,14 @@ async function handleLogout() {
       clearTimeout(knockoutTimer);
       knockoutTimer = null;
     }
+    clearStageAutoTimer();
     if (currentUser) clearDraft(draftStorage, currentUser.id);
     currentUser = null;
     picks = {};
     savedSnapshot = '{}';
     applyKnockoutMeta({});
+    wasAllGroupsRanked = false;
+    activeStage = 'groups';
     if (nameInput) nameInput.value = '';
     loadedUserId = null;
     loadedUpdatedAt = null;
@@ -979,14 +1077,19 @@ async function checkAuth() {
   }
 }
 
-// Stage toggle + knockout chooser bindings
-if (stageGroupsBtn) stageGroupsBtn.addEventListener('click', () => setActiveStage('groups'));
-if (stageKnockoutBtn) stageKnockoutBtn.addEventListener('click', () => setActiveStage('knockout'));
-if (thirdPlaceChooser) thirdPlaceChooser.addEventListener('change', onThirdPlaceChooserChange);
-if (applyThirdsBtn) {
-  applyThirdsBtn.addEventListener('click', () => {
-    afterKnockoutChanged();
-    showAlert('✅ Round of 32 updated from your third-place picks.', 'success');
+// OG-style stage tabs + third-place card grid
+if (stageNav) {
+  stageNav.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-stage]');
+    if (!btn || btn.disabled) return;
+    setActiveStage(btn.dataset.stage);
+  });
+}
+if (thirdPlaceGrid) {
+  thirdPlaceGrid.addEventListener('click', (e) => {
+    const card = e.target.closest('[data-third-group]');
+    if (!card) return;
+    toggleThirdPlace(card.dataset.thirdGroup);
   });
 }
 
@@ -1061,15 +1164,18 @@ async function loadBracket() {
       applyKnockoutMeta(draft.knockout);
       savedSnapshot = JSON.stringify(picks);
       renderBracketUI();
-      if (activeStage === 'knockout') {
-        renderThirdPlaceChooser();
-        renderKnockoutUI();
-      }
+      wasAllGroupsRanked = allGroupsRanked(picks);
+      updateStageNav();
+      reconcileActiveStage();
+      if (activeStage === 'third') renderThirdPlaceGrid();
+      if (activeStage === 'knockout') renderKnockoutUI();
       setSaveStatus('Draft restored · not submitted');
       showAlert('↩️ Restored your unsaved draft (not submitted yet)', 'info');
     } else {
       if (draft) clearDraft(draftStorage, userId); // stale: DB changed elsewhere
       renderBracketUI();
+      wasAllGroupsRanked = allGroupsRanked(picks);
+      updateStageNav();
       if (Object.keys(picks).length) {
         setSaveStatus('Loaded your saved bracket');
         showAlert('👋 Welcome back — we loaded your saved bracket', 'success');

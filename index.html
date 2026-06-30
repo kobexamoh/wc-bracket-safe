@@ -14,7 +14,7 @@
     <header>
         <div class="header-inner">
             <div class="header-title">
-                <h1>⚽ 2026 World Cup Bracket Predictor - Group Stage</h1>
+                <h1>⚽ 2026 World Cup Bracket Predictor — <span id="headerStageLabel">Group Stage</span></h1>
                 <!-- Small subtitle under the h1; shown only once logged in (toggled in app.js). On the sign-in screen the tagline lives in the grey area instead. -->
                 <p id="headerTagline" style="display: none;">Try your hand at predicting the group stage order and eventual tournament winners, and share your picks with the rest of the Digital + Creative team</p>
             </div>
@@ -71,7 +71,7 @@
         </div>
 
         <!-- Bracket Section -->
-        <div id="bracketSection" style="display: none;">
+        <div id="bracketSection" class="bracket-section is-stage-groups" style="display: none;">
             <div class="bracket-topbar">
                 <div class="topbar-actions">
                     <label class="name-field">
@@ -81,7 +81,13 @@
                 </div>
             </div>
 
-            <div class="bracket-layout">
+            <nav id="stageNav" class="stage-nav" aria-label="Bracket stages">
+                <button type="button" class="stage-btn stage-btn--active" data-stage="groups">Group Stage</button>
+                <button type="button" class="stage-btn stage-btn--disabled" data-stage="third" disabled>Third Place</button>
+                <button type="button" class="stage-btn stage-btn--disabled" data-stage="knockout" disabled>Knockout</button>
+            </nav>
+
+            <div id="bracketLayout" class="bracket-layout">
                 <div class="bracket-main">
                     <div class="bracket-toolbar">
                         <div class="bracket-progress">
@@ -110,29 +116,22 @@
                         </div>
                     </div>
 
-                    <div id="bracket"></div>
-                    <div id="knockout" hidden></div>
+                    <div id="bracket" class="stage-panel" data-stage-panel="groups"></div>
+
+                    <div id="thirdPlace" class="stage-panel" data-stage-panel="third" hidden>
+                        <div class="third-place-info">
+                            <h2>Select third-place advancers</h2>
+                            <p class="third-place-info__lead">In the 48-team format, the best 8 of 12 third-place teams advance to the Round of 32. Pick which 8 you think will make it.</p>
+                            <div id="thirdPlaceCounter" class="third-place-info__counter" aria-live="polite">0 / 8 selected</div>
+                        </div>
+                        <div id="thirdPlaceGrid" class="third-place-grid"></div>
+                    </div>
+
+                    <div id="knockout" class="stage-panel" data-stage-panel="knockout" hidden></div>
                 </div>
 
-                <aside class="bracket-side">
-                    <!-- Messages / alerts: sticky on desktop, top on mobile. Also the
-                         future home of the knockout "slide" nav. -->
-                    <nav class="side-nav" aria-label="Bracket stage">
-                        <button id="stageGroupsBtn" type="button" class="side-nav__btn side-nav__btn--active">Group Stage</button>
-                        <button id="stageKnockoutBtn" type="button" class="side-nav__btn">Knockout</button>
-                    </nav>
+                <aside id="bracketSide" class="bracket-side">
                     <div id="alerts" class="side-messages" role="status" aria-live="polite" aria-atomic="true"></div>
-                    <section id="knockoutPanel" class="knockout-panel" hidden>
-                        <h3>Knockout rounds</h3>
-                        <p class="knockout-panel__hint">
-                            Pick which <strong>8 third-place teams</strong> advance, then we'll slot them into the Round of 32 using FIFA's official mapping.
-                        </p>
-                        <div id="thirdPlaceChooser" class="third-place-chooser"></div>
-                        <button id="applyThirdsBtn" type="button" class="btn btn-primary third-place-apply" disabled>
-                            Apply to Round of 32
-                        </button>
-                        <p class="third-place-note">Tip: this only uses your <strong>3rd place</strong> pick from each group.</p>
-                    </section>
                 </aside>
             </div>
 
