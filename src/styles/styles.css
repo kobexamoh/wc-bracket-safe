@@ -641,15 +641,13 @@ header p {
   gap: clamp(24px, 4vw, 56px);
   min-width: min-content;
   padding: 8px 4px 16px;
-  --bracket-arm: 12px;
-  --bracket-reach: 40px;
-  --bracket-line: rgba(15, 23, 42, 0.42);
+  --bracket-round-gap: clamp(20px, 3vw, 48px);
 }
 
 .bracket-half {
   display: flex;
   align-items: center;
-  gap: clamp(20px, 3vw, 48px);
+  gap: var(--bracket-round-gap);
   flex: 1 1 auto;
 }
 
@@ -763,140 +761,12 @@ header p {
   gap: 28px;
 }
 
-.bracket-pair {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  position: relative;
-}
-
+/* Connector lines deferred — pure CSS cannot align forks across our split
+   layout + variable card heights. Revisit with leader-line or export-only SVG. */
 .bracket-pair-matches {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  position: relative;
-}
-
-/* Bracket join lines: each pair forks into one path toward the next round */
-.bracket-pair-matches .bracket-match {
-  position: relative;
-  overflow: visible;
-}
-
-.bracket-join {
-  flex: 0 0 var(--bracket-reach);
-  align-self: stretch;
-  position: relative;
-  min-width: var(--bracket-reach);
-}
-
-.bracket-half--left .bracket-pair-matches .bracket-match::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 50%;
-  width: var(--bracket-arm);
-  height: 2px;
-  background: var(--bracket-line);
-  transform: translateY(-50%) translateX(100%);
-  z-index: 1;
-}
-
-.bracket-half--left .bracket-pair:not(.bracket-pair--solo) .bracket-join::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--bracket-line);
-}
-
-.bracket-half--left .bracket-join::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 2px;
-  background: var(--bracket-line);
-  transform: translateY(-50%);
-}
-
-.bracket-half--right .bracket-pair-matches .bracket-match::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  width: var(--bracket-arm);
-  height: 2px;
-  background: var(--bracket-line);
-  transform: translateY(-50%) translateX(-100%);
-  z-index: 1;
-}
-
-.bracket-half--right .bracket-pair:not(.bracket-pair--solo) .bracket-join::before {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--bracket-line);
-}
-
-.bracket-half--right .bracket-join::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 2px;
-  background: var(--bracket-line);
-  transform: translateY(-50%);
-}
-
-/* Center strip: SF ↔ Final connectors (desktop) */
-@media (min-width: 1024px) {
-  .bracket-center__final-row .bracket-round--solo .bracket-match {
-    overflow: visible;
-  }
-
-  .bracket-center__final-row .bracket-round--solo:first-child .bracket-match::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 50%;
-    width: var(--bracket-reach);
-    height: 2px;
-    background: var(--bracket-line);
-    transform: translateY(-50%) translateX(100%);
-    z-index: 1;
-  }
-
-  .bracket-center__final-row .bracket-round--solo:last-child .bracket-match::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    width: var(--bracket-reach);
-    height: 2px;
-    background: var(--bracket-line);
-    transform: translateY(-50%) translateX(-100%);
-    z-index: 1;
-  }
-
-  .bracket-center__third .bracket-round--solo .bracket-match::before {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 0;
-    width: 2px;
-    height: var(--bracket-reach);
-    background: var(--bracket-line);
-    transform: translateX(-50%) translateY(-100%);
-    z-index: 1;
-  }
 }
 
 .podium-list {

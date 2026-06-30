@@ -56,31 +56,25 @@ function renderMatchCard(match, winner) {
   `;
 }
 
-function renderPair(m1, m2, winners, reverse = false) {
+function renderPair(m1, m2, winners) {
   const solo = !m2;
-  const matchesHtml = `
-    <div class="bracket-pair-matches">
-      ${renderMatchCard(m1, winners[m1?.id])}
-      ${m2 ? renderMatchCard(m2, winners[m2?.id]) : ''}
-    </div>
-  `;
-  const join = '<div class="bracket-join" aria-hidden="true"></div>';
-
   return `
     <div class="bracket-pair${solo ? ' bracket-pair--solo' : ''}">
-      ${reverse ? `${join}${matchesHtml}` : `${matchesHtml}${join}`}
+      <div class="bracket-pair-matches">
+        ${renderMatchCard(m1, winners[m1?.id])}
+        ${m2 ? renderMatchCard(m2, winners[m2?.id]) : ''}
+      </div>
     </div>
   `;
 }
 
-function renderRoundColumn(title, matchIds, matchById, winners, reverse = false) {
+function renderRoundColumn(title, matchIds, matchById, winners) {
   const pairs = [];
   for (let i = 0; i < matchIds.length; i += 2) {
     pairs.push(renderPair(
       matchById[matchIds[i]],
       matchById[matchIds[i + 1]],
       winners,
-      reverse,
     ));
   }
 
@@ -94,12 +88,11 @@ function renderRoundColumn(title, matchIds, matchById, winners, reverse = false)
   `;
 }
 
-function renderSoloFeedRound(title, entries, matchById, winners, reverse = false) {
+function renderSoloFeedRound(title, entries, matchById, winners) {
   const items = entries.map(({ match }) => renderPair(
     matchById[match],
     null,
     winners,
-    reverse,
   ));
 
   return `
@@ -137,9 +130,9 @@ function renderHalf(side, bracket, winners) {
   const matchById = indexMatches(bracket);
   const reverse = side === 'right';
   const rounds = [
-    renderRoundColumn('Round of 32', layout.r32, matchById, winners, reverse),
-    renderRoundColumn('Round of 16', layout.r16, matchById, winners, reverse),
-    renderSoloFeedRound('Quarter-finals', layout.qf, matchById, winners, reverse),
+    renderRoundColumn('Round of 32', layout.r32, matchById, winners),
+    renderRoundColumn('Round of 16', layout.r16, matchById, winners),
+    renderSoloFeedRound('Quarter-finals', layout.qf, matchById, winners),
   ];
   return `
     <div class="bracket-half bracket-half--${side}">
