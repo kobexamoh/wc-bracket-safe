@@ -472,13 +472,21 @@ header p {
 /* ============================================
    Above-the-fold layout (wide desktop)
    Mobile-first: one column with the messages rail on top. At >=1024px the
-   groups take ~3/4 on the left and a sticky ~1/4 rail sits on the right
-   (messages today; built to host the knockout "slide" nav later).
+   groups take ~4/5 on the left and a sticky ~1/5 rail sits on the right
+   (status messages). Third Place + Knockout use the full width.
    ============================================ */
 .bracket-layout {
   display: grid;
   grid-template-columns: 1fr;
   gap: 18px;
+}
+
+.bracket-layout--full {
+  grid-template-columns: 1fr;
+}
+
+.bracket-layout--full .bracket-side {
+  display: none;
 }
 
 .bracket-side {
@@ -488,95 +496,145 @@ header p {
   gap: 12px;
 }
 
-/* Side rail stage nav (Group Stage / Knockout). Lives above alerts and will
-   eventually grow into the knockout slide nav. */
-.side-nav {
+/* OG-style sticky stage tabs (Group → Third Place → Knockout) */
+.stage-nav {
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
+  overflow-x: auto;
+  padding: 12px 0 16px;
+  margin-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
-.side-nav__btn {
-  flex: 1 1 auto;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
+.stage-btn {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  border: 2px solid var(--navy);
   background: #ffffff;
   color: var(--navy);
   border-radius: 10px;
   cursor: pointer;
+  white-space: nowrap;
   font-weight: 800;
   font-size: var(--fs-xs);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.side-nav__btn:hover {
-  border-color: var(--navy);
+.stage-btn:hover:not(:disabled) {
   background: var(--light-gray);
 }
 
-.side-nav__btn--active {
+.stage-btn--active {
   background: var(--navy);
   color: var(--gold);
   border-color: var(--navy);
+  box-shadow: 0 3px 10px rgba(0, 122, 51, 0.2);
 }
 
-.knockout-panel {
-  background: #ffffff;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 14px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
+.stage-btn--completed:not(.stage-btn--active) {
+  background: #e8f5e9;
+  border-color: var(--ua-green);
+  color: #1b5e20;
 }
 
-.knockout-panel h3 {
-  margin: 0 0 8px 0;
-  color: var(--navy);
-  font-size: var(--fs-base);
+.stage-btn--completed:not(.stage-btn--active)::before {
+  content: "✓ ";
   font-weight: 800;
 }
 
-.knockout-panel__hint {
+.stage-btn--disabled,
+.stage-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Group-stage-only chrome hidden on Third Place / Knockout */
+.bracket-section:not(.is-stage-groups) .bracket-toolbar,
+.bracket-section:not(.is-stage-groups) .panel-header,
+.bracket-section:not(.is-stage-groups) .submit-bar-mobile {
+  display: none;
+}
+
+/* Third Place full-width picker */
+.third-place-info {
+  background: var(--navy);
+  color: #ffffff;
+  padding: 16px 20px;
+  border-radius: 14px;
+  text-align: center;
+  margin: 0 auto 20px;
+  max-width: 640px;
+}
+
+.third-place-info h2 {
+  margin: 0 0 8px;
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--gold);
+}
+
+.third-place-info__lead {
+  margin: 0 0 12px;
   font-size: var(--fs-xs);
-  color: #4b5563;
   line-height: 1.5;
-  margin-bottom: 10px;
+  color: rgba(255, 255, 255, 0.92);
 }
 
-.third-place-chooser {
+.third-place-info__counter {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--gold);
+}
+
+.third-place-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-  margin: 10px 0 12px;
-  overflow: auto;
-  padding-right: 2px; /* keep the scrollbar from kissing the border */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.third-place-item {
-  display: flex;
+.third-place-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
   align-items: center;
-  gap: 10px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 12px;
+  gap: 4px 10px;
+  padding: 12px 14px;
+  border: 2px solid var(--border);
+  border-radius: 14px;
   background: #ffffff;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
 
-.third-place-item input {
-  flex: 0 0 auto;
+.third-place-card:hover {
+  border-color: var(--ua-green);
+  transform: translateX(2px);
 }
 
-.third-place-item__label {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.third-place-card.is-selected {
+  background: var(--gold);
+  border-color: var(--navy);
 }
 
-.third-place-item__meta {
+.third-place-card__flag {
+  grid-row: 1 / span 2;
+  width: 1.75rem;
+  height: 1.31rem;
+}
+
+.third-place-card__name {
+  font-size: var(--fs-base);
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.25;
+}
+
+.third-place-card__meta {
+  grid-column: 2;
   font-size: var(--fs-2xs);
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -584,24 +642,19 @@ header p {
   color: #6b7280;
 }
 
-.third-place-item__team {
-  font-size: var(--fs-base);
-  font-weight: 700;
-  color: var(--navy);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.third-place-note {
-  margin-top: 10px;
-  font-size: var(--fs-2xs);
-  color: #6b7280;
-}
-
-.third-place-apply {
-  width: 100%;
-  margin-top: auto; /* keep it pinned below the scrollable chooser */
+.third-place-card__check {
+  grid-row: 1 / span 2;
+  grid-column: 3;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: var(--fs-xs);
 }
 
 /* ============================================
@@ -965,7 +1018,7 @@ header p {
 }
 
 @media (min-width: 1024px) {
-  .bracket-layout {
+  .bracket-layout:not(.bracket-layout--full) {
     grid-template-columns: minmax(0, 4fr) minmax(220px, 1fr);
     align-items: start;
   }
@@ -1699,6 +1752,16 @@ header p {
    .submit-bar-mobile display:none, .bracket-toolbar position:sticky) override it.
    ============================================ */
 @media (max-width: 768px) {
+  .stage-nav {
+    position: sticky;
+    top: 0;
+    z-index: 45;
+    background: var(--light-gray);
+    margin-left: -14px;
+    margin-right: -14px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
   #authSection.login-hero {
     padding-top: 16px;
   }
