@@ -26,6 +26,11 @@ import {
 import { mountBallChase } from './ballChase.js';
 import { saveDraft, readDraft, clearDraft, shouldRestoreDraft } from './draftStore.js';
 import { isOtpCooldownActive, formatCooldownSeconds } from './authUtils.js';
+import {
+  isGroupStageSubmitLocked,
+  GROUP_STAGE_LOCK_BANNER,
+  GROUP_STAGE_LOCK_SUBMIT_ALERT,
+} from './groupStageLock.js';
 import { config } from '../config/supabase.js';
 
 // Initialize Supabase
@@ -169,6 +174,7 @@ function showBracketSection() {
   if (headerTagline) headerTagline.style.display = 'block'; // small subtitle under the h1 once logged in
   wasAllGroupsRanked = allGroupsRanked(picks);
   setActiveStage('groups');
+  refreshSubmitLockUI();
   maybeAutoOpenHelp(); // first-time onboarding overlay (once per browser)
 }
 
@@ -346,6 +352,12 @@ const stageNav = document.getElementById('stageNav');
 const headerStageLabel = document.getElementById('headerStageLabel');
 const thirdPlaceGrid = document.getElementById('thirdPlaceGrid');
 const thirdPlaceCounter = document.getElementById('thirdPlaceCounter');
+const groupStageLockBanner = document.getElementById('groupStageLockBanner');
+
+const SUBMIT_LABEL_OPEN = 'Submit bracket';
+const SUBMIT_LABEL_LOCKED = 'Submissions closed';
+const SUBMIT_TITLE_OPEN = 'Submit your bracket (needs at least 2 picks in every group)';
+const SUBMIT_TITLE_LOCKED = 'Group-stage submissions are closed — the real group stage has finished';
 
 const STAGE_AUTO_MS = 600;
 let activeStage = 'groups'; // 'groups' | 'third' | 'knockout'
@@ -381,6 +393,27 @@ function setSubmitButtons(disabled, label) {
   });
 }
 
+/** Reflect env lock: read-only groups, disabled submit + bulk randomizers. */
+function refreshSubmitLockUI() {
+  const locked = isGroupStageSubmitLocked();
+
+  if (bracketSection) bracketSection.classList.toggle('is-group-stage-locked', locked);
+  if (groupStageLockBanner) groupStageLockBanner.hidden = !(locked && activeStage === 'groups');
+
+  if (randomBtn) randomBtn.disabled = locked;
+  if (deselectBtn) deselectBtn.disabled = locked;
+
+  const isSubmitting = saveBtn?.textContent === 'Submitting…';
+  if (isSubmitting) return;
+
+  [saveBtn, saveBtnMobile].forEach((btn) => {
+    if (!btn) return;
+    btn.disabled = locked;
+    btn.textContent = locked ? SUBMIT_LABEL_LOCKED : SUBMIT_LABEL_OPEN;
+    btn.title = locked ? SUBMIT_TITLE_LOCKED : SUBMIT_TITLE_OPEN;
+  });
+}
+
 function updateProgress() {
   const groups = getGroupOrder();
   const done = groups.filter((code) => (picks[code]?.length || 0) >= ADVANCE_COUNT).length;
@@ -392,7 +425,8 @@ function updateProgress() {
 
 function renderBracketUI() {
   if (!bracketEl) return;
-  bracketEl.innerHTML = renderBracket(picks);
+  const locked = isGroupStageSubmitLocked();
+  bracketEl.innerHTML = renderBracket(picks, { showClearButtons: !locked });
   updateProgress();
 }
 
@@ -463,6 +497,7 @@ function setActiveStage(stage) {
   if (activeStage === 'third') renderThirdPlaceGrid();
   if (activeStage === 'knockout') renderKnockoutUI();
 
+  refreshSubmitLockUI();
   window.scrollTo(0, 0);
 }
 
@@ -660,8 +695,10 @@ function afterKnockoutChanged() {
 // Shared post-change routine: re-render, reflect draft status, and autosave.
 function afterPicksChanged() {
   renderBracketUI();
-  setSaveStatus(hasUnsavedChanges() ? 'Saving draft…' : '');
-  scheduleDraftSave();
+  if (!isGroupStageSubmitLocked()) {
+    setSaveStatus(hasUnsavedChanges() ? 'Saving draft…' : '');
+    scheduleDraftSave();
+  }
 
   const nowAllRanked = allGroupsRanked(picks);
   if (nowAllRanked && !wasAllGroupsRanked && activeStage === 'groups') {
@@ -677,6 +714,8 @@ function afterPicksChanged() {
 }
 
 function onBracketClick(e) {
+  if (isGroupStageSubmitLocked()) return;
+
   // Per-group reset takes priority: it has no data-index, so it isn't a team.
   const clearBtn = e.target.closest('button[data-clear-group]');
   if (clearBtn) {
@@ -699,6 +738,7 @@ function onBracketClick(e) {
 // clears are low-stakes and quickly re-entered, so no confirm (the global
 // Deselect all keeps its confirm because it wipes everything).
 function clearGroup(group) {
+  if (isGroupStageSubmitLocked()) return;
   if (!group || !picks[group]) return; // nothing to clear
   delete picks[group];
   afterPicksChanged();
@@ -710,6 +750,7 @@ function clearGroup(group) {
 
 // Clear every pick at once (with a quick confirm), then autosave the empty draft.
 function handleDeselectAll() {
+  if (isGroupStageSubmitLocked()) return;
   if (!Object.keys(picks).length) return;
   if (!window.confirm('Clear all your picks?')) return;
   picks = {};
@@ -723,6 +764,7 @@ function handleDeselectAll() {
 // protect, so just fill all 12; otherwise open the chooser (or apply the choice
 // remembered for this session) so the user controls exactly what gets touched.
 function handleSelectForMe() {
+  if (isGroupStageSubmitLocked()) return;
   const hasPicks = getGroupOrder().some((code) => picks[code]?.length);
   if (!hasPicks) {
     picks = randomPicks();
@@ -860,6 +902,10 @@ async function handleSave() {
     showAlert('❌ Please sign in before submitting', 'error');
     return;
   }
+  if (isGroupStageSubmitLocked()) {
+    showAlert(GROUP_STAGE_LOCK_SUBMIT_ALERT, 'info', { persist: true });
+    return;
+  }
   // Require at least the advancing pair (2) in every group before saving.
   const incomplete = getGroupOrder().filter((code) => (picks[code]?.length || 0) < ADVANCE_COUNT);
   if (incomplete.length) {
@@ -902,7 +948,7 @@ async function handleSave() {
     setSaveStatus('Not submitted');
     showAlert(`❌ Couldn't submit your bracket: ${err.message}`, 'error');
   } finally {
-    setSubmitButtons(false, 'Submit bracket');
+    refreshSubmitLockUI();
   }
 }
 
@@ -1156,7 +1202,8 @@ async function loadBracket() {
     // loaded (the bracket wasn't saved from another device since). The DB
     // snapshot stays the baseline, so a restored draft reads as "not submitted".
     const draft = readDraft(draftStorage, userId);
-    if (shouldRestoreDraft(draft, updatedAt) && (
+    const lockActive = isGroupStageSubmitLocked();
+    if (!lockActive && shouldRestoreDraft(draft, updatedAt) && (
       JSON.stringify(draft.picks) !== savedSnapshot
       || JSON.stringify(draft.knockout) !== savedKnockoutSnapshot
     )) {
@@ -1172,15 +1219,22 @@ async function loadBracket() {
       setSaveStatus('Draft restored · not submitted');
       showAlert('↩️ Restored your unsaved draft (not submitted yet)', 'info');
     } else {
-      if (draft) clearDraft(draftStorage, userId); // stale: DB changed elsewhere
+      if (draft) clearDraft(draftStorage, userId); // stale: DB changed elsewhere, or lock skips drafts
       renderBracketUI();
       wasAllGroupsRanked = allGroupsRanked(picks);
       updateStageNav();
       if (Object.keys(picks).length) {
         setSaveStatus('Loaded your saved bracket');
-        showAlert('👋 Welcome back — we loaded your saved bracket', 'success');
+        if (lockActive) {
+          showAlert(GROUP_STAGE_LOCK_BANNER, 'info', { persist: true });
+        } else {
+          showAlert('👋 Welcome back — we loaded your saved bracket', 'success');
+        }
       } else {
         setSaveStatus('');
+        if (lockActive) {
+          showAlert(GROUP_STAGE_LOCK_BANNER, 'info', { persist: true });
+        }
       }
     }
   } catch (err) {
@@ -1188,6 +1242,8 @@ async function loadBracket() {
     console.error('Load bracket error:', err);
     showAlert('❌ Failed to load your saved bracket', 'error');
   }
+
+  refreshSubmitLockUI();
 }
 
 // ============================================

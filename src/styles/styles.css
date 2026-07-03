@@ -463,6 +463,36 @@ header p {
   margin-top: 8px;
 }
 
+.group-stage-lock-notice {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  background: #fff7e6;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  color: #5c4a1a;
+  font-weight: 600;
+}
+
+.bracket-section.is-group-stage-locked #bracket .team-row {
+  cursor: default;
+  pointer-events: none;
+}
+
+.bracket-section.is-group-stage-locked #bracket .team-row:hover {
+  border-color: var(--light-gray);
+  background: var(--light-gray);
+}
+
+.bracket-section.is-group-stage-locked #bracket .team-row.is-ranked:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.bracket-section.is-group-stage-locked #bracket .team-row.is-advancing:hover {
+  background: #fff7e6;
+  border-color: var(--gold);
+}
+
 .groups-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
