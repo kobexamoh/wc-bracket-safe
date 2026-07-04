@@ -4,6 +4,7 @@ export const STAGE_HEADER_LABELS = {
   groups: 'Group Stage',
   third: 'Third Place',
   knockout: 'Knockout',
+  officialBracket: 'Official Bracket',
 };
 
 /** OG-strict: every group must have all four ranks before Third Place unlocks. */
@@ -29,6 +30,11 @@ export function getStageNavState(picks, thirdGroups, activeStage) {
       active: activeStage === 'knockout',
       completed: false,
       disabled: !thirdComplete,
+    },
+    officialBracket: {
+      active: activeStage === 'officialBracket',
+      completed: false,
+      disabled: false,
     },
   };
 }

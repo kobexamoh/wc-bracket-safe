@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { validatePicks, validateKnockoutMeta, buildStoredPicks, extractBracketPayload } from '../src/js/bracketStore.js';
+import { validatePicks, validateKnockoutMeta, validateRealKnockoutMeta, buildStoredPicks, extractBracketPayload } from '../src/js/bracketStore.js';
 
 test('validatePicks keeps valid teams in order', () => {
   const result = validatePicks({ A: ['South Korea', 'Mexico', 'Czech Rep.', 'South Africa'] });
@@ -59,4 +59,38 @@ test('extractBracketPayload splits group picks from knockout meta', () => {
   assert.deepEqual(picks, { A: ['Mexico', 'South Africa'] });
   assert.deepEqual(knockout.winners, { M97: 'B' });
   assert.deepEqual(knockout.thirdGroups, ['A', 'B']);
+});
+
+test('validateRealKnockoutMeta keeps valid winners', () => {
+  const meta = validateRealKnockoutMeta({
+    winners: { M89: 'A', M104: 'B', bad: 'C' },
+  });
+  assert.deepEqual(meta.winners, { M89: 'A', M104: 'B' });
+});
+
+test('validateRealKnockoutMeta handles null/empty', () => {
+  assert.deepEqual(validateRealKnockoutMeta(null), { winners: {} });
+  assert.deepEqual(validateRealKnockoutMeta({}), { winners: {} });
+});
+
+test('buildStoredPicks nests __knockout_real when provided', () => {
+  const stored = buildStoredPicks(
+    { A: ['Mexico', 'South Africa'] },
+    null,
+    { winners: { M89: 'A' } },
+  );
+  assert.deepEqual(stored.A, ['Mexico', 'South Africa']);
+  assert.deepEqual(stored.__knockout_real.winners, { M89: 'A' });
+  assert.ok(!stored.__knockout, 'No personal knockout meta when not provided');
+});
+
+test('extractBracketPayload splits __knockout_real', () => {
+  const { picks, knockout, knockoutReal } = extractBracketPayload({
+    A: ['Mexico', 'South Africa'],
+    __knockout: { winners: { M97: 'B' }, thirdGroups: ['A', 'B'] },
+    __knockout_real: { winners: { M89: 'A', M90: 'B' } },
+  });
+  assert.deepEqual(picks, { A: ['Mexico', 'South Africa'] });
+  assert.deepEqual(knockout.winners, { M97: 'B' });
+  assert.deepEqual(knockoutReal.winners, { M89: 'A', M90: 'B' });
 });

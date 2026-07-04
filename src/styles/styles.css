@@ -586,6 +586,30 @@ header p {
 }
 
 /* Third Place full-width picker */
+.official-bracket-info {
+  background: var(--navy);
+  color: #ffffff;
+  padding: 16px 20px;
+  border-radius: 14px;
+  text-align: center;
+  margin: 0 auto 20px;
+  max-width: 640px;
+}
+
+.official-bracket-info h2 {
+  margin: 0 0 8px;
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--gold);
+}
+
+.official-bracket-info__lead {
+  margin: 0;
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.92);
+}
+
 .third-place-info {
   background: var(--navy);
   color: #ffffff;
@@ -944,6 +968,21 @@ header p {
 .bracket-team.winner {
   border-color: var(--gold);
   background: #fff7e6;
+}
+
+.bracket-team.is-locked.winner {
+  border-color: var(--ua-green);
+  background: #e6f4ea;
+  cursor: default;
+}
+
+.bracket-team.is-locked.loser {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.bracket-match.is-locked {
+  position: relative;
 }
 
 .bracket-team__flag {
