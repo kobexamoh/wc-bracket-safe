@@ -1368,6 +1368,7 @@ async function loadBracket() {
       reconcileActiveStage();
       if (activeStage === 'third') renderThirdPlaceGrid();
       if (activeStage === 'knockout') renderKnockoutUI();
+      if (activeStage === 'officialBracket') renderOfficialBracketUI();
       setSaveStatus('Draft restored · not submitted');
       showAlert('↩️ Restored your unsaved draft (not submitted yet)', 'info');
     } else {
@@ -1375,6 +1376,7 @@ async function loadBracket() {
       renderBracketUI();
       wasAllGroupsRanked = allGroupsRanked(picks);
       updateStageNav();
+      if (activeStage === 'officialBracket') renderOfficialBracketUI();
       if (Object.keys(picks).length) {
         setSaveStatus('Loaded your saved bracket');
         if (lockActive) {
