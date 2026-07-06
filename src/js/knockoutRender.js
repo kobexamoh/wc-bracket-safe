@@ -20,15 +20,15 @@ function indexMatches(bracket) {
   return map;
 }
 
-function renderFlag(teamName) {
+function renderFlag(teamName, flagExt = 'svg') {
   const code = teamName ? getFlagCode(teamName) : null;
   if (!code) {
     return '<span class="bracket-team__flag bracket-team__flag--empty" aria-hidden="true"></span>';
   }
-  return `<img class="bracket-team__flag" src="${FLAG_BASE}${code}.svg" alt="" width="20" height="15">`;
+  return `<img class="bracket-team__flag" src="${FLAG_BASE}${code}.${flagExt}" alt="" width="20" height="15">`;
 }
 
-function renderTeamButton(match, side, slot, winner, { locked = false } = {}) {
+function renderTeamButton(match, side, slot, winner, { locked = false, flagExt = 'svg' } = {}) {
   const isWinner = winner === side;
   const isLoser = locked && winner && winner !== side;
   const disabled = !slot.team || locked;
@@ -41,35 +41,35 @@ function renderTeamButton(match, side, slot, winner, { locked = false } = {}) {
       aria-pressed="${isWinner ? 'true' : 'false'}"
       ${disabled ? 'disabled' : ''}
     >
-      ${renderFlag(slot.team)}
+      ${renderFlag(slot.team, flagExt)}
       <span class="bracket-team__name">${esc(slot.team || 'TBD')}</span>
     </button>
   `;
 }
 
-function renderMatchCard(match, winner, { locked = false } = {}) {
+function renderMatchCard(match, winner, { locked = false, flagExt = 'svg' } = {}) {
   if (!match) return '';
   return `
     <article class="bracket-match${locked ? ' is-locked' : ''}" data-match="${match.id}">
-      ${renderTeamButton(match, 'A', match.a, winner, { locked })}
-      ${renderTeamButton(match, 'B', match.b, winner, { locked })}
+      ${renderTeamButton(match, 'A', match.a, winner, { locked, flagExt })}
+      ${renderTeamButton(match, 'B', match.b, winner, { locked, flagExt })}
     </article>
   `;
 }
 
-function renderPair(m1, m2, winners, lockedSet) {
+function renderPair(m1, m2, winners, lockedSet, flagExt = 'svg') {
   const solo = !m2;
   return `
     <div class="bracket-pair${solo ? ' bracket-pair--solo' : ''}">
       <div class="bracket-pair-matches">
-        ${renderMatchCard(m1, winners[m1?.id], { locked: lockedSet.has(m1?.id) })}
-        ${m2 ? renderMatchCard(m2, winners[m2?.id], { locked: lockedSet.has(m2?.id) }) : ''}
+        ${renderMatchCard(m1, winners[m1?.id], { locked: lockedSet.has(m1?.id), flagExt })}
+        ${m2 ? renderMatchCard(m2, winners[m2?.id], { locked: lockedSet.has(m2?.id), flagExt }) : ''}
       </div>
     </div>
   `;
 }
 
-function renderRoundColumn(title, matchIds, matchById, winners, lockedSet) {
+function renderRoundColumn(title, matchIds, matchById, winners, lockedSet, flagExt = 'svg') {
   const pairs = [];
   for (let i = 0; i < matchIds.length; i += 2) {
     pairs.push(renderPair(
@@ -77,6 +77,7 @@ function renderRoundColumn(title, matchIds, matchById, winners, lockedSet) {
       matchById[matchIds[i + 1]],
       winners,
       lockedSet,
+      flagExt,
     ));
   }
 
@@ -90,12 +91,13 @@ function renderRoundColumn(title, matchIds, matchById, winners, lockedSet) {
   `;
 }
 
-function renderSoloFeedRound(title, entries, matchById, winners, lockedSet) {
+function renderSoloFeedRound(title, entries, matchById, winners, lockedSet, flagExt = 'svg') {
   const items = entries.map(({ match }) => renderPair(
     matchById[match],
     null,
     winners,
     lockedSet,
+    flagExt,
   ));
 
   return `
@@ -115,27 +117,27 @@ function renderRoundTitle(title, { qfHelp = false } = {}) {
   return `<h2 class="bracket-round__title">${title}${infoBtn}</h2>`;
 }
 
-function renderSingleMatchColumn(title, match, winners, { emphasis = false, lockedSet = new Set() } = {}) {
+function renderSingleMatchColumn(title, match, winners, { emphasis = false, lockedSet = new Set(), flagExt = 'svg' } = {}) {
   if (!match) return '';
   const mod = emphasis ? ' bracket-round--final' : '';
   return `
     <section class="bracket-round bracket-round--solo${mod}">
       ${renderRoundTitle(title)}
       <div class="bracket-round__pairs">
-        ${renderMatchCard(match, winners[match.id], { locked: lockedSet.has(match.id) })}
+        ${renderMatchCard(match, winners[match.id], { locked: lockedSet.has(match.id), flagExt })}
       </div>
     </section>
   `;
 }
 
-function renderHalf(side, bracket, winners, lockedSet) {
+function renderHalf(side, bracket, winners, lockedSet, flagExt = 'svg') {
   const layout = BRACKET_LAYOUT[side];
   const matchById = indexMatches(bracket);
   const reverse = side === 'right';
   const rounds = [
-    renderRoundColumn('Round of 32', layout.r32, matchById, winners, lockedSet),
-    renderRoundColumn('Round of 16', layout.r16, matchById, winners, lockedSet),
-    renderSoloFeedRound('Quarter-finals', layout.qf, matchById, winners, lockedSet),
+    renderRoundColumn('Round of 32', layout.r32, matchById, winners, lockedSet, flagExt),
+    renderRoundColumn('Round of 16', layout.r16, matchById, winners, lockedSet, flagExt),
+    renderSoloFeedRound('Quarter-finals', layout.qf, matchById, winners, lockedSet, flagExt),
   ];
   return `
     <div class="bracket-half bracket-half--${side}">
@@ -144,7 +146,7 @@ function renderHalf(side, bracket, winners, lockedSet) {
   `;
 }
 
-function renderCenterColumn(bracket, winners, lockedSet) {
+function renderCenterColumn(bracket, winners, lockedSet, flagExt = 'svg') {
   const matchById = indexMatches(bracket);
   const [m101, m102] = BRACKET_LAYOUT.center.sf.map((id) => matchById[id]);
   const finalMatch = bracket.final?.[0] || null;
@@ -154,12 +156,12 @@ function renderCenterColumn(bracket, winners, lockedSet) {
   return `
     <div class="bracket-center">
       <div class="bracket-center__final-row">
-        ${renderSingleMatchColumn('Semi-final', m101, winners, { lockedSet })}
-        ${renderSingleMatchColumn('Final', finalMatch, winners, { emphasis: true, lockedSet })}
-        ${renderSingleMatchColumn('Semi-final', m102, winners, { lockedSet })}
+        ${renderSingleMatchColumn('Semi-final', m101, winners, { lockedSet, flagExt })}
+        ${renderSingleMatchColumn('Final', finalMatch, winners, { emphasis: true, lockedSet, flagExt })}
+        ${renderSingleMatchColumn('Semi-final', m102, winners, { lockedSet, flagExt })}
       </div>
       <div class="bracket-center__third${bothSfPicked ? '' : ' bracket-center__third--locked'}">
-        ${renderSingleMatchColumn('Third-place match', thirdMatch, winners, { lockedSet })}
+        ${renderSingleMatchColumn('Third-place match', thirdMatch, winners, { lockedSet, flagExt })}
         ${bothSfPicked ? '' : '<p class="bracket-center__hint">Pick both semi-finals to unlock the third-place match.</p>'}
       </div>
     </div>
@@ -170,8 +172,11 @@ function renderCenterColumn(bracket, winners, lockedSet) {
  * Athletic-inspired bracket tree: left half → final/champion ← right half,
  * with connector lines between paired matches.
  */
-export function renderKnockoutTree(bracket, winners = {}, { lockedMatches = new Set() } = {}) {
-  const podiumBtn = bracket.championTeam
+export function renderKnockoutTree(bracket, winners = {}, options = {}) {
+  const lockedMatches = options.lockedMatches ?? new Set();
+  const flagExt = options.flagExt ?? 'svg';
+  const hidePodiumCta = options.hidePodiumCta ?? false;
+  const podiumBtn = !hidePodiumCta && bracket.championTeam
     ? `<div class="knockout-podium-cta"><button type="button" class="btn btn-primary btn-sm" id="viewPodiumBtn">View your podium picks</button></div>`
     : '';
 
@@ -179,9 +184,9 @@ export function renderKnockoutTree(bracket, winners = {}, { lockedMatches = new 
     <div class="knockout-canvas">
       <div class="knockout-scroll">
         <div class="knockout-bracket">
-          ${renderHalf('left', bracket, winners, lockedMatches)}
-          ${renderCenterColumn(bracket, winners, lockedMatches)}
-          ${renderHalf('right', bracket, winners, lockedMatches)}
+          ${renderHalf('left', bracket, winners, lockedMatches, flagExt)}
+          ${renderCenterColumn(bracket, winners, lockedMatches, flagExt)}
+          ${renderHalf('right', bracket, winners, lockedMatches, flagExt)}
         </div>
       </div>
       ${podiumBtn}

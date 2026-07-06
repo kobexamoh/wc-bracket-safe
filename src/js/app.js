@@ -13,7 +13,7 @@ import { inject } from '@vercel/analytics';
 import { sanitizeEmail, redactEmail } from './sanitize.js';
 import { renderBracket, getGroupOrder, getGroupTeamNames, getFlagCode, randomPicks, fillBlankRanks, randomizeGroups, ADVANCE_COUNT } from './bracketData.js';
 import { loadBracketRow, savePicks } from './bracketStore.js';
-import { downloadBracketImage } from './exportImage.js';
+import { downloadBracketImage, downloadOfficialKnockoutImage } from './exportImage.js';
 import { celebrate } from './celebrate.js';
 import { getThirdPlaceCandidates, buildKnockoutBracket, applyWinnerPick, getPodiumPlacements } from './knockout.js';
 import { renderKnockoutTree } from './knockoutRender.js';
@@ -178,10 +178,13 @@ function showBracketSection() {
   const headerTagline = document.getElementById('headerTagline');
   if (headerTagline) headerTagline.style.display = 'block'; // small subtitle under the h1 once logged in
   wasAllGroupsRanked = allGroupsRanked(picks);
-  if (isGroupStageSubmitLocked()) {
-    setActiveStage('officialBracket');
-  } else {
-    setActiveStage('groups');
+  if (!bracketSectionInitialized) {
+    if (isGroupStageSubmitLocked()) {
+      setActiveStage('officialBracket');
+    } else {
+      setActiveStage('groups');
+    }
+    bracketSectionInitialized = true;
   }
   refreshSubmitLockUI();
   maybeAutoOpenHelp(); // first-time onboarding overlay (once per browser)
@@ -364,6 +367,9 @@ const thirdPlaceCounter = document.getElementById('thirdPlaceCounter');
 const groupStageLockBanner = document.getElementById('groupStageLockBanner');
 const officialBracketEl = document.getElementById('officialBracket');
 const officialBracketTree = document.getElementById('officialBracketTree');
+const officialExportBtn = document.getElementById('officialExportBtn');
+const officialSubmitBtn = document.getElementById('officialSubmitBtn');
+const officialSaveStatusEl = document.getElementById('officialSaveStatus');
 
 const SUBMIT_LABEL_OPEN = 'Submit bracket';
 const SUBMIT_LABEL_LOCKED = 'Submissions closed';
@@ -382,6 +388,12 @@ let officialWinners = {};      // user's own picks for unlocked real-bracket mat
 let savedOfficialSnapshot = '{"winners":{}}';
 let officialSaveTimer = null;
 const OFFICIAL_DEBOUNCE_MS = 1200;
+const OFFICIAL_SUBMIT_LABEL = 'Submit official picks';
+
+// Only set the initial stage tab once per login — tab refocus re-runs checkAuth()
+// but must not yank the user back to Group Stage / Official Bracket.
+let bracketSectionInitialized = false;
+let championModalContext = 'knockout';
 
 function currentKnockoutMeta() {
   return { winners: knockoutWinners, thirdGroups: selectedThirdGroups };
@@ -412,6 +424,37 @@ function hasUnsavedKnockoutChanges() {
 
 function setSaveStatus(text) {
   if (saveStatusEl) saveStatusEl.textContent = text;
+}
+
+function setOfficialSaveStatus(text) {
+  if (officialSaveStatusEl) officialSaveStatusEl.textContent = text;
+}
+
+function isOfficialPodiumComplete() {
+  try {
+    const { bracket, mergedWinners } = buildRealResultsBracket(officialWinners);
+    const podium = getPodiumPlacements(bracket, mergedWinners);
+    return Boolean(podium.first && podium.second && podium.third && podium.fourth);
+  } catch {
+    return false;
+  }
+}
+
+function setOfficialSubmitButton(disabled, label) {
+  if (!officialSubmitBtn) return;
+  officialSubmitBtn.disabled = disabled;
+  if (label) officialSubmitBtn.textContent = label;
+}
+
+function refreshOfficialSubmitUI() {
+  if (!officialSubmitBtn) return;
+  const complete = isOfficialPodiumComplete();
+  const isSubmitting = officialSubmitBtn.textContent === 'Submitting…';
+  officialSubmitBtn.hidden = !complete && !isSubmitting;
+  if (isSubmitting) return;
+  officialSubmitBtn.disabled = !complete;
+  officialSubmitBtn.textContent = OFFICIAL_SUBMIT_LABEL;
+  officialSubmitBtn.title = 'Submit your official bracket picks (needs champion through 4th place)';
 }
 
 // Submit appears twice (desktop toolbar + mobile bottom bar); toggle both together.
@@ -509,7 +552,12 @@ function setActiveStage(stage) {
   activeStage = valid.includes(stage) ? stage : 'groups';
 
   if (bracketSection) {
-    bracketSection.classList.remove('is-stage-groups', 'is-stage-third', 'is-stage-knockout');
+    bracketSection.classList.remove(
+      'is-stage-groups',
+      'is-stage-third',
+      'is-stage-knockout',
+      'is-stage-officialBracket',
+    );
     bracketSection.classList.add(`is-stage-${activeStage}`);
   }
   if (bracketLayout) {
@@ -620,6 +668,13 @@ function renderKnockoutUI() {
 
 function openChampionModal() {
   if (!championModal || !podiumList) return;
+  championModalContext = 'knockout';
+  const championTitle = document.getElementById('championTitle');
+  if (championTitle) championTitle.textContent = 'Your knockout podium';
+  if (championScreenshotBtn) {
+    championScreenshotBtn.disabled = true;
+    championScreenshotBtn.title = 'Screenshot export available from the Official Bracket tab';
+  }
   const bracket = buildKnockoutBracket(picks, selectedThirdGroups, knockoutWinners);
   const podium = getPodiumPlacements(bracket, knockoutWinners);
   const rows = [
@@ -743,6 +798,7 @@ function renderOfficialBracketUI() {
   if (newScrollEl && savedScrollLeft > 0) {
     newScrollEl.scrollLeft = savedScrollLeft;
   }
+  refreshOfficialSubmitUI();
 }
 
 function scheduleOfficialSave() {
@@ -768,17 +824,17 @@ async function flushOfficialSave() {
     );
     savedOfficialSnapshot = JSON.stringify(saved.knockoutReal);
     loadedUpdatedAt = saved.updatedAt;
-    setSaveStatus('Official picks saved ✓');
+    setOfficialSaveStatus('Official picks saved ✓');
   } catch (err) {
     console.error('Official bracket save error:', err);
-    setSaveStatus('Official picks not saved');
+    setOfficialSaveStatus('Official picks not saved');
   }
 }
 
 function afterOfficialChanged() {
   renderOfficialBracketUI();
   if (!currentUser) return;
-  setSaveStatus('Saving official picks…');
+  setOfficialSaveStatus('Saving official picks…');
   scheduleOfficialSave();
 }
 
@@ -962,7 +1018,6 @@ function applyChooserAndClose() {
   applySelectForMe(mode, codes);
 }
 
-// Download the current bracket as a branded PNG (html2canvas is lazy-loaded).
 async function handleExport() {
   if (!Object.keys(picks).length) {
     showAlert('Pick at least one team before downloading an image', 'info');
@@ -984,6 +1039,64 @@ async function handleExport() {
       exportBtn.disabled = false;
       exportBtn.textContent = 'Screenshot bracket (PNG)';
     }
+  }
+}
+
+async function handleOfficialExport() {
+  if (officialExportBtn) {
+    officialExportBtn.disabled = true;
+    officialExportBtn.textContent = 'Generating…';
+  }
+  try {
+    const { bracket, mergedWinners, lockedSet } = buildRealResultsBracket(officialWinners);
+    const name = nameInput ? nameInput.value : '';
+    await downloadOfficialKnockoutImage(bracket, mergedWinners, lockedSet, { name });
+    showAlert('🖼️ Image downloaded', 'success');
+  } catch (err) {
+    console.error('Official export error:', err);
+    showAlert(`❌ Could not export image: ${err.message}`, 'error');
+  } finally {
+    if (officialExportBtn) {
+      officialExportBtn.disabled = false;
+      officialExportBtn.textContent = 'Screenshot bracket (PNG)';
+    }
+  }
+}
+
+async function handleOfficialSubmit() {
+  if (!currentUser) {
+    showAlert('❌ Please sign in before submitting', 'error');
+    return;
+  }
+  if (!isOfficialPodiumComplete()) {
+    showAlert('❌ Pick champion, runner-up, 3rd, and 4th before submitting', 'error');
+    return;
+  }
+  if (officialSaveTimer) {
+    clearTimeout(officialSaveTimer);
+    officialSaveTimer = null;
+  }
+  setOfficialSubmitButton(true, 'Submitting…');
+  setOfficialSaveStatus('Submitting…');
+  try {
+    const saved = await savePicks(
+      supabase,
+      currentUser.id,
+      picks,
+      currentKnockoutMeta(),
+      currentOfficialMeta(),
+    );
+    savedOfficialSnapshot = JSON.stringify(saved.knockoutReal);
+    loadedUpdatedAt = saved.updatedAt;
+    setOfficialSaveStatus('Submitted ✓');
+    clearAllAlerts();
+    openOfficialChampionModal();
+  } catch (err) {
+    console.error('Official submit error:', err);
+    setOfficialSaveStatus('Not submitted');
+    showAlert(`❌ Couldn't submit your official picks: ${err.message}`, 'error');
+  } finally {
+    refreshOfficialSubmitUI();
   }
 }
 
@@ -1187,6 +1300,7 @@ async function handleLogout() {
     loadedUpdatedAt = null;
     lastLoginEmail = '';
     sessionSelectMode = null; // forget the remembered "Select for me" choice
+    bracketSectionInitialized = false;
     showAuthSection();
     showAlert('✅ Signed out', 'success');
   } catch (err) {
@@ -1307,6 +1421,13 @@ if (officialBracketTree) {
 
 function openOfficialChampionModal() {
   if (!championModal || !podiumList) return;
+  championModalContext = 'official';
+  const championTitle = document.getElementById('championTitle');
+  if (championTitle) championTitle.textContent = 'Your official bracket podium';
+  if (championScreenshotBtn) {
+    championScreenshotBtn.disabled = false;
+    championScreenshotBtn.title = 'Download your official bracket as an image';
+  }
   const { bracket, mergedWinners } = buildRealResultsBracket(officialWinners);
   const podium = getPodiumPlacements(bracket, mergedWinners);
   const rows = [
@@ -1412,6 +1533,8 @@ if (saveBtnMobile) saveBtnMobile.addEventListener('click', handleSave);
 if (deselectBtn) deselectBtn.addEventListener('click', handleDeselectAll);
 if (randomBtn) randomBtn.addEventListener('click', handleSelectForMe);
 if (exportBtn) exportBtn.addEventListener('click', handleExport);
+if (officialExportBtn) officialExportBtn.addEventListener('click', handleOfficialExport);
+if (officialSubmitBtn) officialSubmitBtn.addEventListener('click', handleOfficialSubmit);
 if (nameInput) nameInput.addEventListener('input', () => {
   if (currentUser) persistName(currentUser.id, nameInput.value.trim());
 });
@@ -1457,6 +1580,15 @@ if (successScreenshotBtn) {
   successScreenshotBtn.addEventListener('click', () => {
     closeModal(successModal);
     handleExport();
+  });
+}
+
+if (championScreenshotBtn) {
+  championScreenshotBtn.addEventListener('click', () => {
+    closeModal(championModal);
+    if (championModalContext === 'official') {
+      handleOfficialExport();
+    }
   });
 }
 

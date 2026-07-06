@@ -610,6 +610,37 @@ header p {
   color: rgba(255, 255, 255, 0.92);
 }
 
+.official-bracket-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 0 auto 18px;
+  max-width: 1200px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.official-bracket-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.bracket-export--knockout .knockout-scroll {
+  overflow: visible;
+}
+
+.bracket-export--knockout .knockout-bracket {
+  gap: 32px;
+}
+
 .third-place-info {
   background: var(--navy);
   color: #ffffff;
