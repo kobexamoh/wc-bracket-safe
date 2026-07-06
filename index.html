@@ -85,6 +85,7 @@
                 <button type="button" class="stage-btn stage-btn--active" data-stage="groups">Group Stage</button>
                 <button type="button" class="stage-btn stage-btn--disabled" data-stage="third" disabled>Third Place</button>
                 <button type="button" class="stage-btn stage-btn--disabled" data-stage="knockout" disabled>Knockout</button>
+                <button type="button" class="stage-btn" data-stage="officialBracket">Official Bracket</button>
             </nav>
 
             <div id="bracketLayout" class="bracket-layout">
@@ -129,6 +130,14 @@
                     </div>
 
                     <div id="knockout" class="stage-panel" data-stage-panel="knockout" hidden></div>
+
+                    <div id="officialBracket" class="stage-panel" data-stage-panel="officialBracket" hidden>
+                        <div class="official-bracket-info">
+                            <h2>Official Bracket</h2>
+                            <p class="official-bracket-info__lead">Real match results from the 2026 World Cup. Completed matches are locked — pick the remaining fixtures to predict who lifts the trophy.</p>
+                        </div>
+                        <div id="officialBracketTree"></div>
+                    </div>
                 </div>
 
                 <aside id="bracketSide" class="bracket-side">

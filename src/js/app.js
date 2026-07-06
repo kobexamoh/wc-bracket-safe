@@ -18,6 +18,11 @@ import { celebrate } from './celebrate.js';
 import { getThirdPlaceCandidates, buildKnockoutBracket, applyWinnerPick, getPodiumPlacements } from './knockout.js';
 import { renderKnockoutTree } from './knockoutRender.js';
 import {
+  buildRealResultsBracket,
+  applyRealWinnerPick,
+  getLockedMatchIds,
+} from './realKnockout.js';
+import {
   allGroupsRanked,
   isThirdPlaceComplete,
   getStageNavState,
@@ -173,7 +178,11 @@ function showBracketSection() {
   const headerTagline = document.getElementById('headerTagline');
   if (headerTagline) headerTagline.style.display = 'block'; // small subtitle under the h1 once logged in
   wasAllGroupsRanked = allGroupsRanked(picks);
-  setActiveStage('groups');
+  if (isGroupStageSubmitLocked()) {
+    setActiveStage('officialBracket');
+  } else {
+    setActiveStage('groups');
+  }
   refreshSubmitLockUI();
   maybeAutoOpenHelp(); // first-time onboarding overlay (once per browser)
 }
@@ -353,6 +362,8 @@ const headerStageLabel = document.getElementById('headerStageLabel');
 const thirdPlaceGrid = document.getElementById('thirdPlaceGrid');
 const thirdPlaceCounter = document.getElementById('thirdPlaceCounter');
 const groupStageLockBanner = document.getElementById('groupStageLockBanner');
+const officialBracketEl = document.getElementById('officialBracket');
+const officialBracketTree = document.getElementById('officialBracketTree');
 
 const SUBMIT_LABEL_OPEN = 'Submit bracket';
 const SUBMIT_LABEL_LOCKED = 'Submissions closed';
@@ -366,6 +377,12 @@ let knockoutWinners = {}; // { [matchId]: 'A'|'B' }
 let wasAllGroupsRanked = false;
 let stageAutoTimer = null;
 
+// Official Bracket (real-results) state
+let officialWinners = {};      // user's own picks for unlocked real-bracket matches
+let savedOfficialSnapshot = '{"winners":{}}';
+let officialSaveTimer = null;
+const OFFICIAL_DEBOUNCE_MS = 1200;
+
 function currentKnockoutMeta() {
   return { winners: knockoutWinners, thirdGroups: selectedThirdGroups };
 }
@@ -374,6 +391,19 @@ function applyKnockoutMeta(meta = {}) {
   knockoutWinners = meta.winners ? { ...meta.winners } : {};
   selectedThirdGroups = Array.isArray(meta.thirdGroups) ? [...meta.thirdGroups] : [];
   savedKnockoutSnapshot = JSON.stringify(currentKnockoutMeta());
+}
+
+function currentOfficialMeta() {
+  return { winners: officialWinners };
+}
+
+function applyOfficialMeta(meta = {}) {
+  officialWinners = meta?.winners ? { ...meta.winners } : {};
+  savedOfficialSnapshot = JSON.stringify(currentOfficialMeta());
+}
+
+function hasUnsavedOfficialChanges() {
+  return JSON.stringify(currentOfficialMeta()) !== savedOfficialSnapshot;
 }
 
 function hasUnsavedKnockoutChanges() {
@@ -475,7 +505,8 @@ function setActiveStage(stage) {
   if (stage === 'knockout' && !isThirdPlaceComplete(selectedThirdGroups)) return;
 
   clearStageAutoTimer();
-  activeStage = stage === 'knockout' ? 'knockout' : stage === 'third' ? 'third' : 'groups';
+  const valid = ['groups', 'third', 'knockout', 'officialBracket'];
+  activeStage = valid.includes(stage) ? stage : 'groups';
 
   if (bracketSection) {
     bracketSection.classList.remove('is-stage-groups', 'is-stage-third', 'is-stage-knockout');
@@ -496,6 +527,7 @@ function setActiveStage(stage) {
 
   if (activeStage === 'third') renderThirdPlaceGrid();
   if (activeStage === 'knockout') renderKnockoutUI();
+  if (activeStage === 'officialBracket') renderOfficialBracketUI();
 
   refreshSubmitLockUI();
   window.scrollTo(0, 0);
@@ -668,8 +700,9 @@ async function flushKnockoutSave() {
   if (!hasUnsavedKnockoutChanges()) return;
 
   try {
-    const saved = await savePicks(supabase, currentUser.id, picks, currentKnockoutMeta());
+    const saved = await savePicks(supabase, currentUser.id, picks, currentKnockoutMeta(), currentOfficialMeta());
     savedKnockoutSnapshot = JSON.stringify(saved.knockout);
+    savedOfficialSnapshot = JSON.stringify(saved.knockoutReal);
     loadedUpdatedAt = saved.updatedAt;
     setSaveStatus('Knockout saved ✓');
   } catch (err) {
@@ -690,6 +723,63 @@ function afterKnockoutChanged() {
   }
   setSaveStatus('Saving knockout…');
   scheduleKnockoutSave();
+}
+
+// ── Official Bracket (real results) ──────────────────────────────────────────
+
+function renderOfficialBracketUI() {
+  if (!officialBracketTree) return;
+  const scrollEl = officialBracketTree.querySelector('.knockout-scroll');
+  const savedScrollLeft = scrollEl ? scrollEl.scrollLeft : 0;
+
+  try {
+    const { bracket, mergedWinners, lockedSet } = buildRealResultsBracket(officialWinners);
+    officialBracketTree.innerHTML = renderKnockoutTree(bracket, mergedWinners, { lockedMatches: lockedSet });
+  } catch (err) {
+    officialBracketTree.innerHTML = `<div class="alert error">${err.message}</div>`;
+  }
+
+  const newScrollEl = officialBracketTree.querySelector('.knockout-scroll');
+  if (newScrollEl && savedScrollLeft > 0) {
+    newScrollEl.scrollLeft = savedScrollLeft;
+  }
+}
+
+function scheduleOfficialSave() {
+  if (officialSaveTimer) clearTimeout(officialSaveTimer);
+  officialSaveTimer = setTimeout(flushOfficialSave, OFFICIAL_DEBOUNCE_MS);
+}
+
+async function flushOfficialSave() {
+  if (officialSaveTimer) {
+    clearTimeout(officialSaveTimer);
+    officialSaveTimer = null;
+  }
+  if (!currentUser) return;
+  if (!hasUnsavedOfficialChanges()) return;
+
+  try {
+    const saved = await savePicks(
+      supabase,
+      currentUser.id,
+      picks,
+      currentKnockoutMeta(),
+      currentOfficialMeta(),
+    );
+    savedOfficialSnapshot = JSON.stringify(saved.knockoutReal);
+    loadedUpdatedAt = saved.updatedAt;
+    setSaveStatus('Official picks saved ✓');
+  } catch (err) {
+    console.error('Official bracket save error:', err);
+    setSaveStatus('Official picks not saved');
+  }
+}
+
+function afterOfficialChanged() {
+  renderOfficialBracketUI();
+  if (!currentUser) return;
+  setSaveStatus('Saving official picks…');
+  scheduleOfficialSave();
 }
 
 // Shared post-change routine: re-render, reflect draft status, and autosave.
@@ -922,10 +1012,11 @@ async function handleSave() {
   setSubmitButtons(true, 'Submitting…');
   setSaveStatus('Submitting…');
   try {
-    const saved = await savePicks(supabase, currentUser.id, picks, currentKnockoutMeta());
+    const saved = await savePicks(supabase, currentUser.id, picks, currentKnockoutMeta(), currentOfficialMeta());
     picks = saved.picks;
     savedSnapshot = JSON.stringify(picks);
     savedKnockoutSnapshot = JSON.stringify(saved.knockout);
+    savedOfficialSnapshot = JSON.stringify(saved.knockoutReal);
     loadedUpdatedAt = saved.updatedAt;
     clearDraft(draftStorage, currentUser.id); // DB is now the source of truth
     renderBracketUI();
@@ -1078,12 +1169,17 @@ async function handleLogout() {
       clearTimeout(knockoutTimer);
       knockoutTimer = null;
     }
+    if (officialSaveTimer) {
+      clearTimeout(officialSaveTimer);
+      officialSaveTimer = null;
+    }
     clearStageAutoTimer();
     if (currentUser) clearDraft(draftStorage, currentUser.id);
     currentUser = null;
     picks = {};
     savedSnapshot = '{}';
     applyKnockoutMeta({});
+    applyOfficialMeta({});
     wasAllGroupsRanked = false;
     activeStage = 'groups';
     if (nameInput) nameInput.value = '';
@@ -1174,6 +1270,61 @@ if (knockoutEl) {
   });
 }
 
+// Official Bracket click handler: same pick UX but respects locked matches.
+if (officialBracketTree) {
+  officialBracketTree.addEventListener('click', (e) => {
+    if (e.target.closest('#viewPodiumBtn')) {
+      openOfficialChampionModal();
+      return;
+    }
+
+    const btn = e.target.closest('button[data-match][data-side]');
+    if (!btn || btn.disabled) return;
+    const matchId = btn.dataset.match;
+    const side = btn.dataset.side;
+
+    const lockedSet = getLockedMatchIds();
+    if (lockedSet.has(matchId)) return;
+
+    if (matchId === 'M103') {
+      const { mergedWinners } = buildRealResultsBracket(officialWinners);
+      if (!mergedWinners.M101 || !mergedWinners.M102) return;
+    }
+
+    const prevBracket = buildRealResultsBracket(officialWinners);
+    const prevChampion = prevBracket.bracket.championTeam || null;
+
+    officialWinners = applyRealWinnerPick(officialWinners, matchId, side);
+    afterOfficialChanged();
+
+    const nextBracket = buildRealResultsBracket(officialWinners);
+    const nextChampion = nextBracket.bracket.championTeam || null;
+    if (!prevChampion && nextChampion) {
+      openOfficialChampionModal();
+    }
+  });
+}
+
+function openOfficialChampionModal() {
+  if (!championModal || !podiumList) return;
+  const { bracket, mergedWinners } = buildRealResultsBracket(officialWinners);
+  const podium = getPodiumPlacements(bracket, mergedWinners);
+  const rows = [
+    ['1st place', podium.first],
+    ['2nd place', podium.second],
+    ['3rd place', podium.third],
+    ['4th place', podium.fourth],
+  ];
+  podiumList.innerHTML = rows
+    .map(([label, team]) => {
+      const value = team || '— (not picked yet)';
+      return `<li class="podium-list__item"><span class="podium-list__place">${label}</span><span class="podium-list__team">${value}</span></li>`;
+    })
+    .join('');
+  openModal(championModal);
+  celebrate();
+}
+
 // ============================================
 // Bracket Data
 // ============================================
@@ -1192,9 +1343,10 @@ async function loadBracket() {
   renderBracketUI(); // show the interactive bracket immediately
 
   try {
-    const { picks: dbPicks, knockout: dbKnockout, updatedAt } = await loadBracketRow(supabase, userId);
+    const { picks: dbPicks, knockout: dbKnockout, knockoutReal: dbKnockoutReal, updatedAt } = await loadBracketRow(supabase, userId);
     picks = dbPicks;
     applyKnockoutMeta(dbKnockout);
+    applyOfficialMeta(dbKnockoutReal);
     savedSnapshot = JSON.stringify(picks);
     loadedUpdatedAt = updatedAt;
 
@@ -1216,6 +1368,7 @@ async function loadBracket() {
       reconcileActiveStage();
       if (activeStage === 'third') renderThirdPlaceGrid();
       if (activeStage === 'knockout') renderKnockoutUI();
+      if (activeStage === 'officialBracket') renderOfficialBracketUI();
       setSaveStatus('Draft restored · not submitted');
       showAlert('↩️ Restored your unsaved draft (not submitted yet)', 'info');
     } else {
@@ -1223,6 +1376,7 @@ async function loadBracket() {
       renderBracketUI();
       wasAllGroupsRanked = allGroupsRanked(picks);
       updateStageNav();
+      if (activeStage === 'officialBracket') renderOfficialBracketUI();
       if (Object.keys(picks).length) {
         setSaveStatus('Loaded your saved bracket');
         if (lockActive) {
@@ -1324,11 +1478,13 @@ window.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     if (draftTimer) flushDraft();
     if (knockoutTimer) flushKnockoutSave();
+    if (officialSaveTimer) flushOfficialSave();
   }
 });
 window.addEventListener('pagehide', () => {
   if (draftTimer) flushDraft();
   if (knockoutTimer) flushKnockoutSave();
+  if (officialSaveTimer) flushOfficialSave();
 });
 
 // Check authentication on page load

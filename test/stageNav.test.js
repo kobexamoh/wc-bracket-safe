@@ -37,3 +37,13 @@ test('getStageNavState locks third and knockout until prerequisites met', () => 
   assert.equal(knockoutReady.knockout.disabled, false);
   assert.equal(knockoutReady.knockout.active, true);
 });
+
+test('officialBracket stage is always enabled', () => {
+  const empty = getStageNavState({}, [], 'groups');
+  assert.equal(empty.officialBracket.disabled, false);
+  assert.equal(empty.officialBracket.active, false);
+
+  const active = getStageNavState({}, [], 'officialBracket');
+  assert.equal(active.officialBracket.active, true);
+  assert.equal(active.officialBracket.disabled, false);
+});

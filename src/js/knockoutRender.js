@@ -28,13 +28,14 @@ function renderFlag(teamName) {
   return `<img class="bracket-team__flag" src="${FLAG_BASE}${code}.svg" alt="" width="20" height="15">`;
 }
 
-function renderTeamButton(match, side, slot, winner) {
+function renderTeamButton(match, side, slot, winner, { locked = false } = {}) {
   const isWinner = winner === side;
-  const disabled = !slot.team;
+  const isLoser = locked && winner && winner !== side;
+  const disabled = !slot.team || locked;
   return `
     <button
       type="button"
-      class="bracket-team${isWinner ? ' winner' : ''}${disabled ? ' is-empty' : ''}"
+      class="bracket-team${isWinner ? ' winner' : ''}${isLoser ? ' loser' : ''}${disabled ? ' is-empty' : ''}${locked ? ' is-locked' : ''}"
       data-match="${match.id}"
       data-side="${side}"
       aria-pressed="${isWinner ? 'true' : 'false'}"
@@ -46,35 +47,36 @@ function renderTeamButton(match, side, slot, winner) {
   `;
 }
 
-function renderMatchCard(match, winner) {
+function renderMatchCard(match, winner, { locked = false } = {}) {
   if (!match) return '';
   return `
-    <article class="bracket-match" data-match="${match.id}">
-      ${renderTeamButton(match, 'A', match.a, winner)}
-      ${renderTeamButton(match, 'B', match.b, winner)}
+    <article class="bracket-match${locked ? ' is-locked' : ''}" data-match="${match.id}">
+      ${renderTeamButton(match, 'A', match.a, winner, { locked })}
+      ${renderTeamButton(match, 'B', match.b, winner, { locked })}
     </article>
   `;
 }
 
-function renderPair(m1, m2, winners) {
+function renderPair(m1, m2, winners, lockedSet) {
   const solo = !m2;
   return `
     <div class="bracket-pair${solo ? ' bracket-pair--solo' : ''}">
       <div class="bracket-pair-matches">
-        ${renderMatchCard(m1, winners[m1?.id])}
-        ${m2 ? renderMatchCard(m2, winners[m2?.id]) : ''}
+        ${renderMatchCard(m1, winners[m1?.id], { locked: lockedSet.has(m1?.id) })}
+        ${m2 ? renderMatchCard(m2, winners[m2?.id], { locked: lockedSet.has(m2?.id) }) : ''}
       </div>
     </div>
   `;
 }
 
-function renderRoundColumn(title, matchIds, matchById, winners) {
+function renderRoundColumn(title, matchIds, matchById, winners, lockedSet) {
   const pairs = [];
   for (let i = 0; i < matchIds.length; i += 2) {
     pairs.push(renderPair(
       matchById[matchIds[i]],
       matchById[matchIds[i + 1]],
       winners,
+      lockedSet,
     ));
   }
 
@@ -88,11 +90,12 @@ function renderRoundColumn(title, matchIds, matchById, winners) {
   `;
 }
 
-function renderSoloFeedRound(title, entries, matchById, winners) {
+function renderSoloFeedRound(title, entries, matchById, winners, lockedSet) {
   const items = entries.map(({ match }) => renderPair(
     matchById[match],
     null,
     winners,
+    lockedSet,
   ));
 
   return `
@@ -112,27 +115,27 @@ function renderRoundTitle(title, { qfHelp = false } = {}) {
   return `<h2 class="bracket-round__title">${title}${infoBtn}</h2>`;
 }
 
-function renderSingleMatchColumn(title, match, winners, { emphasis = false } = {}) {
+function renderSingleMatchColumn(title, match, winners, { emphasis = false, lockedSet = new Set() } = {}) {
   if (!match) return '';
   const mod = emphasis ? ' bracket-round--final' : '';
   return `
     <section class="bracket-round bracket-round--solo${mod}">
       ${renderRoundTitle(title)}
       <div class="bracket-round__pairs">
-        ${renderMatchCard(match, winners[match.id])}
+        ${renderMatchCard(match, winners[match.id], { locked: lockedSet.has(match.id) })}
       </div>
     </section>
   `;
 }
 
-function renderHalf(side, bracket, winners) {
+function renderHalf(side, bracket, winners, lockedSet) {
   const layout = BRACKET_LAYOUT[side];
   const matchById = indexMatches(bracket);
   const reverse = side === 'right';
   const rounds = [
-    renderRoundColumn('Round of 32', layout.r32, matchById, winners),
-    renderRoundColumn('Round of 16', layout.r16, matchById, winners),
-    renderSoloFeedRound('Quarter-finals', layout.qf, matchById, winners),
+    renderRoundColumn('Round of 32', layout.r32, matchById, winners, lockedSet),
+    renderRoundColumn('Round of 16', layout.r16, matchById, winners, lockedSet),
+    renderSoloFeedRound('Quarter-finals', layout.qf, matchById, winners, lockedSet),
   ];
   return `
     <div class="bracket-half bracket-half--${side}">
@@ -141,7 +144,7 @@ function renderHalf(side, bracket, winners) {
   `;
 }
 
-function renderCenterColumn(bracket, winners) {
+function renderCenterColumn(bracket, winners, lockedSet) {
   const matchById = indexMatches(bracket);
   const [m101, m102] = BRACKET_LAYOUT.center.sf.map((id) => matchById[id]);
   const finalMatch = bracket.final?.[0] || null;
@@ -151,12 +154,12 @@ function renderCenterColumn(bracket, winners) {
   return `
     <div class="bracket-center">
       <div class="bracket-center__final-row">
-        ${renderSingleMatchColumn('Semi-final', m101, winners)}
-        ${renderSingleMatchColumn('Final', finalMatch, winners, { emphasis: true })}
-        ${renderSingleMatchColumn('Semi-final', m102, winners)}
+        ${renderSingleMatchColumn('Semi-final', m101, winners, { lockedSet })}
+        ${renderSingleMatchColumn('Final', finalMatch, winners, { emphasis: true, lockedSet })}
+        ${renderSingleMatchColumn('Semi-final', m102, winners, { lockedSet })}
       </div>
       <div class="bracket-center__third${bothSfPicked ? '' : ' bracket-center__third--locked'}">
-        ${renderSingleMatchColumn('Third-place match', thirdMatch, winners)}
+        ${renderSingleMatchColumn('Third-place match', thirdMatch, winners, { lockedSet })}
         ${bothSfPicked ? '' : '<p class="bracket-center__hint">Pick both semi-finals to unlock the third-place match.</p>'}
       </div>
     </div>
@@ -167,7 +170,7 @@ function renderCenterColumn(bracket, winners) {
  * Athletic-inspired bracket tree: left half → final/champion ← right half,
  * with connector lines between paired matches.
  */
-export function renderKnockoutTree(bracket, winners = {}) {
+export function renderKnockoutTree(bracket, winners = {}, { lockedMatches = new Set() } = {}) {
   const podiumBtn = bracket.championTeam
     ? `<div class="knockout-podium-cta"><button type="button" class="btn btn-primary btn-sm" id="viewPodiumBtn">View your podium picks</button></div>`
     : '';
@@ -176,9 +179,9 @@ export function renderKnockoutTree(bracket, winners = {}) {
     <div class="knockout-canvas">
       <div class="knockout-scroll">
         <div class="knockout-bracket">
-          ${renderHalf('left', bracket, winners)}
-          ${renderCenterColumn(bracket, winners)}
-          ${renderHalf('right', bracket, winners)}
+          ${renderHalf('left', bracket, winners, lockedMatches)}
+          ${renderCenterColumn(bracket, winners, lockedMatches)}
+          ${renderHalf('right', bracket, winners, lockedMatches)}
         </div>
       </div>
       ${podiumBtn}
