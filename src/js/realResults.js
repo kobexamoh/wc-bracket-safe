@@ -65,15 +65,15 @@ export const REAL_MATCH_WINNERS = {
   'M87': 'Colombia',         // 1-0 vs Ghana
   'M88': 'Egypt',            // 1-1 (4-2 pens) vs Australia
 
-  // ── Round of 16 (Jul 4–7) — add results as they happen ────────────
-  // 'M89': 'team',           // Paraguay vs France
-  // 'M90': 'team',           // Canada vs Morocco
-  // 'M91': 'team',           // Brazil vs Norway
-  // 'M92': 'team',           // Mexico vs England
-  // 'M93': 'team',           // Portugal vs Spain
-  // 'M94': 'team',           // United States vs Belgium
-  // 'M95': 'team',           // Argentina vs Egypt
-  // 'M96': 'team',           // Switzerland vs Colombia
+  // ── Round of 16 (Jul 4–7) ─────────────────────────────────────────
+  'M89': 'France',           // 1-0 vs Paraguay (Jul 4)
+  'M90': 'Morocco',          // 3-0 vs Canada (Jul 4)
+  'M91': 'Norway',           // 2-1 vs Brazil (Jul 5)
+  'M92': 'England',          // 3-2 vs Mexico (Jul 5)
+  // 'M93': 'team',           // Portugal vs Spain (Jul 6)
+  // 'M94': 'team',           // United States vs Belgium (Jul 6)
+  // 'M95': 'team',           // Argentina vs Egypt (Jul 7)
+  // 'M96': 'team',           // Switzerland vs Colombia (Jul 7)
 
   // ── Quarter-finals (Jul 9–11) ─────────────────────────────────────
   // 'M97': 'team',
