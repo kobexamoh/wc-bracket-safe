@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { screenshotFilename, personalizedTitle, personalizedFilename } from '../src/js/exportImage.js';
+import { screenshotFilename, personalizedTitle, personalizedFilename, officialBracketTitle, officialBracketFilename } from '../src/js/exportImage.js';
 
 test('screenshotFilename zero-pads month and day', () => {
   assert.equal(screenshotFilename(new Date(2026, 0, 5)), 'wc-bracket-2026-01-05.png');
@@ -24,4 +24,14 @@ test('personalizedFilename slugifies the name and prefixes the dated base', () =
   assert.equal(personalizedFilename('Kobe Amoh', new Date(2026, 5, 17)), 'kobe-amoh-wc-bracket-2026-06-17.png');
   assert.equal(personalizedFilename('   ', new Date(2026, 5, 17)), 'wc-bracket-2026-06-17.png');
   assert.equal(personalizedFilename('', new Date(2026, 0, 5)), 'wc-bracket-2026-01-05.png');
+});
+
+test('officialBracketTitle uses the name, with a neutral fallback when blank', () => {
+  assert.equal(officialBracketTitle('Kobe'), "Kobe's Official WC Bracket");
+  assert.equal(officialBracketTitle('   '), 'My Official WC Bracket');
+});
+
+test('officialBracketFilename slugifies the name and prefixes the dated base', () => {
+  assert.equal(officialBracketFilename('amoh', new Date(2026, 6, 6)), 'amoh-official-wc-bracket-2026-07-06.png');
+  assert.equal(officialBracketFilename('', new Date(2026, 6, 6)), 'official-wc-bracket-2026-07-06.png');
 });

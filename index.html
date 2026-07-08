@@ -136,6 +136,13 @@
                             <h2>Official Bracket</h2>
                             <p class="official-bracket-info__lead">Real match results from the 2026 World Cup. Completed matches are locked — pick the remaining fixtures to predict who lifts the trophy.</p>
                         </div>
+                        <div class="official-bracket-toolbar">
+                            <span id="officialSaveStatus" class="save-status" role="status" aria-live="polite"></span>
+                            <div class="official-bracket-actions">
+                                <button id="officialExportBtn" type="button" class="btn btn-ghost" title="Download your official bracket as an image to share">Screenshot bracket (PNG)</button>
+                                <button id="officialSubmitBtn" type="button" class="btn btn-primary" hidden title="Submit your official bracket picks (needs champion through 4th place)">Submit official picks</button>
+                            </div>
+                        </div>
                         <div id="officialBracketTree"></div>
                     </div>
                 </div>
@@ -317,7 +324,7 @@
             </div>
             <div class="modal__foot">
                 <button type="button" class="btn btn-ghost" data-close-champion>Back to bracket</button>
-                <button type="button" id="championScreenshotBtn" class="btn btn-primary" disabled title="Knockout screenshot export coming soon">Screenshot podium (soon)</button>
+                <button type="button" id="championScreenshotBtn" class="btn btn-primary" disabled title="Screenshot export available from the Official Bracket tab">Screenshot bracket (PNG)</button>
             </div>
         </div>
     </div>
