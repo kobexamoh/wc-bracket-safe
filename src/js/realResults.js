@@ -70,10 +70,10 @@ export const REAL_MATCH_WINNERS = {
   'M90': 'Morocco',          // 3-0 vs Canada (Jul 4)
   'M91': 'Norway',           // 2-1 vs Brazil (Jul 5)
   'M92': 'England',          // 3-2 vs Mexico (Jul 5)
-  // 'M93': 'team',           // Portugal vs Spain (Jul 6)
-  // 'M94': 'team',           // United States vs Belgium (Jul 6)
-  // 'M95': 'team',           // Argentina vs Egypt (Jul 7)
-  // 'M96': 'team',           // Switzerland vs Colombia (Jul 7)
+  'M93': 'Spain',            // 1-0 vs Portugal (Jul 6)
+  'M94': 'Belgium',          // 4-1 vs United States (Jul 6)
+  'M95': 'Argentina',        // 3-2 vs Egypt (Jul 7)
+  'M96': 'Switzerland',      // 4-3 pens vs Colombia (Jul 7)
 
   // ── Quarter-finals (Jul 9–11) ─────────────────────────────────────
   // 'M97': 'team',
