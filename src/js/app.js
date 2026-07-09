@@ -385,7 +385,8 @@ let stageAutoTimer = null;
 
 // Official Bracket (real-results) state
 let officialWinners = {};      // user's own picks for unlocked real-bracket matches
-let savedOfficialSnapshot = '{"winners":{}}';
+let officialSubmittedAt = '';
+let savedOfficialSnapshot = '{"winners":{},"submittedAt":""}';
 let officialSaveTimer = null;
 const OFFICIAL_DEBOUNCE_MS = 1200;
 const OFFICIAL_SUBMIT_LABEL = 'Submit official picks';
@@ -406,11 +407,12 @@ function applyKnockoutMeta(meta = {}) {
 }
 
 function currentOfficialMeta() {
-  return { winners: officialWinners };
+  return { winners: officialWinners, submittedAt: officialSubmittedAt };
 }
 
 function applyOfficialMeta(meta = {}) {
   officialWinners = meta?.winners ? { ...meta.winners } : {};
+  officialSubmittedAt = typeof meta?.submittedAt === 'string' ? meta.submittedAt : '';
   savedOfficialSnapshot = JSON.stringify(currentOfficialMeta());
 }
 
@@ -1076,6 +1078,7 @@ async function handleOfficialSubmit() {
     clearTimeout(officialSaveTimer);
     officialSaveTimer = null;
   }
+  officialSubmittedAt = new Date().toISOString();
   setOfficialSubmitButton(true, 'Submitting…');
   setOfficialSaveStatus('Submitting…');
   try {
@@ -1086,6 +1089,7 @@ async function handleOfficialSubmit() {
       currentKnockoutMeta(),
       currentOfficialMeta(),
     );
+    officialSubmittedAt = saved.knockoutReal?.submittedAt || officialSubmittedAt;
     savedOfficialSnapshot = JSON.stringify(saved.knockoutReal);
     loadedUpdatedAt = saved.updatedAt;
     setOfficialSaveStatus('Submitted ✓');
@@ -1292,6 +1296,7 @@ async function handleLogout() {
     picks = {};
     savedSnapshot = '{}';
     applyKnockoutMeta({});
+    officialSubmittedAt = '';
     applyOfficialMeta({});
     wasAllGroupsRanked = false;
     activeStage = 'groups';

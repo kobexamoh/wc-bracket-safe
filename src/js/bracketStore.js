@@ -50,10 +50,11 @@ export function validateKnockoutMeta(meta) {
 
 /**
  * Validate real-results knockout metadata.
- * Shape: { winners: { [matchId]: 'A'|'B' } } (no thirdGroups — those are fixed).
+ * Shape: { winners: { [matchId]: 'A'|'B' }, submittedAt?: string }.
+ * (No thirdGroups — those are fixed.)
  */
 export function validateRealKnockoutMeta(meta) {
-  const out = { winners: {} };
+  const out = { winners: {}, submittedAt: '' };
   if (!meta || typeof meta !== 'object') return out;
 
   if (meta.winners && typeof meta.winners === 'object') {
@@ -62,6 +63,12 @@ export function validateRealKnockoutMeta(meta) {
         out.winners[matchId] = side;
       }
     }
+  }
+
+  if (typeof meta.submittedAt === 'string') {
+    const trimmed = meta.submittedAt.trim();
+    // Only accept ISO-ish timestamps (e.g. "2026-07-09T06:00:00.000Z").
+    if (/^\d{4}-\d{2}-\d{2}T/.test(trimmed)) out.submittedAt = trimmed.slice(0, 64);
   }
 
   return out;
@@ -95,8 +102,9 @@ export function buildStoredPicks(picks, knockout = null, knockoutReal = null) {
   }
 
   const realMeta = validateRealKnockoutMeta(knockoutReal);
-  if (Object.keys(realMeta.winners).length > 0) {
+  if (Object.keys(realMeta.winners).length > 0 || realMeta.submittedAt) {
     stored[KNOCKOUT_REAL_KEY] = { winners: realMeta.winners };
+    if (realMeta.submittedAt) stored[KNOCKOUT_REAL_KEY].submittedAt = realMeta.submittedAt;
   }
 
   return stored;

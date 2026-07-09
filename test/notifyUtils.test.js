@@ -136,6 +136,31 @@ describe('parseSupabaseBracketEvent', () => {
     assert.equal(event?.notify, false);
   });
 
+  it('notifies Slack when Official Bracket is explicitly submitted', () => {
+    const groupOnly = { A: ['Mexico', 'South Africa'] };
+    const event = parseSupabaseBracketEvent({
+      type: 'UPDATE',
+      table: 'brackets',
+      record: {
+        user_id: 'abc-123',
+        updated_at: '2026-06-27T15:00:00Z',
+        picks: {
+          ...groupOnly,
+          __knockout_real: { winners: { M97: 'A' }, submittedAt: '2026-07-09T06:00:00.000Z' },
+        },
+      },
+      old_record: {
+        user_id: 'abc-123',
+        picks: {
+          ...groupOnly,
+          __knockout_real: { winners: { M97: 'A' }, submittedAt: '' },
+        },
+      },
+    });
+    assert.equal(event?.notify, true);
+    assert.equal(event?.action, 'official_submitted');
+  });
+
   it('shouldNotifyBracketWebhook treats INSERT as notify', () => {
     assert.equal(shouldNotifyBracketWebhook('INSERT', { picks: {} }, null), true);
   });
@@ -175,6 +200,15 @@ describe('Slack formatters', () => {
       updatedAt: '2026-06-27T12:00:00Z',
     });
     assert.match(JSON.stringify(payload), /12345678…/);
+  });
+
+  it('formats Official Bracket submissions differently', () => {
+    const payload = formatSlackBracket({
+      action: 'official_submitted',
+      userId: '12345678-abcd',
+      updatedAt: '2026-06-27T12:00:00Z',
+    });
+    assert.match(payload.text, /official bracket/i);
   });
 
   it('formats email failure events', () => {
