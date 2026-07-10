@@ -169,6 +169,26 @@ function showAuthSection() {
   startBallChase();
 }
 
+const LAST_STAGE_KEY = 'wc-bracket:last-stage';
+
+function loadLastStage() {
+  if (!draftStorage) return '';
+  try {
+    return String(draftStorage.getItem(LAST_STAGE_KEY) || '');
+  } catch {
+    return '';
+  }
+}
+
+function saveLastStage(stage) {
+  if (!draftStorage) return;
+  try {
+    draftStorage.setItem(LAST_STAGE_KEY, stage);
+  } catch {
+    // ignore
+  }
+}
+
 function showBracketSection() {
   stopBallChase();
   document.getElementById('authSection').style.display = 'none';
@@ -179,7 +199,16 @@ function showBracketSection() {
   if (headerTagline) headerTagline.style.display = 'block'; // small subtitle under the h1 once logged in
   wasAllGroupsRanked = allGroupsRanked(picks);
   if (!bracketSectionInitialized) {
-    if (isGroupStageSubmitLocked()) {
+    const last = loadLastStage();
+    if (last === 'third' && allGroupsRanked(picks)) {
+      setActiveStage('third');
+    } else if (last === 'knockout' && isThirdPlaceComplete(selectedThirdGroups)) {
+      setActiveStage('knockout');
+    } else if (last === 'officialBracket') {
+      setActiveStage('officialBracket');
+    } else if (last === 'groups') {
+      setActiveStage('groups');
+    } else if (isGroupStageSubmitLocked()) {
       setActiveStage('officialBracket');
     } else {
       setActiveStage('groups');
@@ -552,6 +581,7 @@ function setActiveStage(stage) {
   clearStageAutoTimer();
   const valid = ['groups', 'third', 'knockout', 'officialBracket'];
   activeStage = valid.includes(stage) ? stage : 'groups';
+  saveLastStage(activeStage);
 
   if (bracketSection) {
     bracketSection.classList.remove(
