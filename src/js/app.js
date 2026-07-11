@@ -169,6 +169,26 @@ function showAuthSection() {
   startBallChase();
 }
 
+const LAST_STAGE_KEY = 'wc-bracket:last-stage';
+
+function loadLastStage() {
+  if (!draftStorage) return '';
+  try {
+    return String(draftStorage.getItem(LAST_STAGE_KEY) || '');
+  } catch {
+    return '';
+  }
+}
+
+function saveLastStage(stage) {
+  if (!draftStorage) return;
+  try {
+    draftStorage.setItem(LAST_STAGE_KEY, stage);
+  } catch {
+    // ignore
+  }
+}
+
 function showBracketSection() {
   stopBallChase();
   document.getElementById('authSection').style.display = 'none';
@@ -179,7 +199,16 @@ function showBracketSection() {
   if (headerTagline) headerTagline.style.display = 'block'; // small subtitle under the h1 once logged in
   wasAllGroupsRanked = allGroupsRanked(picks);
   if (!bracketSectionInitialized) {
-    if (isGroupStageSubmitLocked()) {
+    const last = loadLastStage();
+    if (last === 'third' && allGroupsRanked(picks)) {
+      setActiveStage('third');
+    } else if (last === 'knockout' && isThirdPlaceComplete(selectedThirdGroups)) {
+      setActiveStage('knockout');
+    } else if (last === 'officialBracket') {
+      setActiveStage('officialBracket');
+    } else if (last === 'groups') {
+      setActiveStage('groups');
+    } else if (isGroupStageSubmitLocked()) {
       setActiveStage('officialBracket');
     } else {
       setActiveStage('groups');
@@ -385,7 +414,8 @@ let stageAutoTimer = null;
 
 // Official Bracket (real-results) state
 let officialWinners = {};      // user's own picks for unlocked real-bracket matches
-let savedOfficialSnapshot = '{"winners":{}}';
+let officialSubmittedAt = '';
+let savedOfficialSnapshot = '{"winners":{},"submittedAt":""}';
 let officialSaveTimer = null;
 const OFFICIAL_DEBOUNCE_MS = 1200;
 const OFFICIAL_SUBMIT_LABEL = 'Submit official picks';
@@ -406,11 +436,12 @@ function applyKnockoutMeta(meta = {}) {
 }
 
 function currentOfficialMeta() {
-  return { winners: officialWinners };
+  return { winners: officialWinners, submittedAt: officialSubmittedAt };
 }
 
 function applyOfficialMeta(meta = {}) {
   officialWinners = meta?.winners ? { ...meta.winners } : {};
+  officialSubmittedAt = typeof meta?.submittedAt === 'string' ? meta.submittedAt : '';
   savedOfficialSnapshot = JSON.stringify(currentOfficialMeta());
 }
 
@@ -550,6 +581,7 @@ function setActiveStage(stage) {
   clearStageAutoTimer();
   const valid = ['groups', 'third', 'knockout', 'officialBracket'];
   activeStage = valid.includes(stage) ? stage : 'groups';
+  saveLastStage(activeStage);
 
   if (bracketSection) {
     bracketSection.classList.remove(
@@ -1076,6 +1108,7 @@ async function handleOfficialSubmit() {
     clearTimeout(officialSaveTimer);
     officialSaveTimer = null;
   }
+  officialSubmittedAt = new Date().toISOString();
   setOfficialSubmitButton(true, 'Submitting…');
   setOfficialSaveStatus('Submitting…');
   try {
@@ -1086,6 +1119,7 @@ async function handleOfficialSubmit() {
       currentKnockoutMeta(),
       currentOfficialMeta(),
     );
+    officialSubmittedAt = saved.knockoutReal?.submittedAt || officialSubmittedAt;
     savedOfficialSnapshot = JSON.stringify(saved.knockoutReal);
     loadedUpdatedAt = saved.updatedAt;
     setOfficialSaveStatus('Submitted ✓');
@@ -1292,6 +1326,7 @@ async function handleLogout() {
     picks = {};
     savedSnapshot = '{}';
     applyKnockoutMeta({});
+    officialSubmittedAt = '';
     applyOfficialMeta({});
     wasAllGroupsRanked = false;
     activeStage = 'groups';

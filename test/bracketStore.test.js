@@ -66,21 +66,23 @@ test('validateRealKnockoutMeta keeps valid winners', () => {
     winners: { M89: 'A', M104: 'B', bad: 'C' },
   });
   assert.deepEqual(meta.winners, { M89: 'A', M104: 'B' });
+  assert.equal(meta.submittedAt, '');
 });
 
 test('validateRealKnockoutMeta handles null/empty', () => {
-  assert.deepEqual(validateRealKnockoutMeta(null), { winners: {} });
-  assert.deepEqual(validateRealKnockoutMeta({}), { winners: {} });
+  assert.deepEqual(validateRealKnockoutMeta(null), { winners: {}, submittedAt: '' });
+  assert.deepEqual(validateRealKnockoutMeta({}), { winners: {}, submittedAt: '' });
 });
 
 test('buildStoredPicks nests __knockout_real when provided', () => {
   const stored = buildStoredPicks(
     { A: ['Mexico', 'South Africa'] },
     null,
-    { winners: { M89: 'A' } },
+    { winners: { M89: 'A' }, submittedAt: '2026-07-09T06:00:00.000Z' },
   );
   assert.deepEqual(stored.A, ['Mexico', 'South Africa']);
   assert.deepEqual(stored.__knockout_real.winners, { M89: 'A' });
+  assert.equal(stored.__knockout_real.submittedAt, '2026-07-09T06:00:00.000Z');
   assert.ok(!stored.__knockout, 'No personal knockout meta when not provided');
 });
 
@@ -88,9 +90,10 @@ test('extractBracketPayload splits __knockout_real', () => {
   const { picks, knockout, knockoutReal } = extractBracketPayload({
     A: ['Mexico', 'South Africa'],
     __knockout: { winners: { M97: 'B' }, thirdGroups: ['A', 'B'] },
-    __knockout_real: { winners: { M89: 'A', M90: 'B' } },
+    __knockout_real: { winners: { M89: 'A', M90: 'B' }, submittedAt: '2026-07-09T06:00:00.000Z' },
   });
   assert.deepEqual(picks, { A: ['Mexico', 'South Africa'] });
   assert.deepEqual(knockout.winners, { M97: 'B' });
   assert.deepEqual(knockoutReal.winners, { M89: 'A', M90: 'B' });
+  assert.equal(knockoutReal.submittedAt, '2026-07-09T06:00:00.000Z');
 });
