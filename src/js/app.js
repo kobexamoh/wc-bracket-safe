@@ -417,8 +417,10 @@ let officialWinners = {};      // user's own picks for unlocked real-bracket mat
 let officialSubmittedAt = '';
 let savedOfficialSnapshot = '{"winners":{},"submittedAt":""}';
 let officialSaveTimer = null;
+let officialSubmitting = false;
 const OFFICIAL_DEBOUNCE_MS = 1200;
 const OFFICIAL_SUBMIT_LABEL = 'Submit official picks';
+const OFFICIAL_RESUBMIT_LABEL = 'Update official picks';
 
 // Only set the initial stage tab once per login — tab refocus re-runs checkAuth()
 // but must not yank the user back to Group Stage / Official Bracket.
@@ -471,21 +473,21 @@ function isOfficialPodiumComplete() {
   }
 }
 
-function setOfficialSubmitButton(disabled, label) {
-  if (!officialSubmitBtn) return;
-  officialSubmitBtn.disabled = disabled;
-  if (label) officialSubmitBtn.textContent = label;
-}
-
 function refreshOfficialSubmitUI() {
   if (!officialSubmitBtn) return;
   const complete = isOfficialPodiumComplete();
-  const isSubmitting = officialSubmitBtn.textContent === 'Submitting…';
-  officialSubmitBtn.hidden = !complete && !isSubmitting;
-  if (isSubmitting) return;
+  officialSubmitBtn.hidden = !complete && !officialSubmitting;
+  if (officialSubmitting) {
+    officialSubmitBtn.disabled = true;
+    officialSubmitBtn.textContent = 'Submitting…';
+    return;
+  }
+  const alreadySubmitted = Boolean(officialSubmittedAt);
   officialSubmitBtn.disabled = !complete;
-  officialSubmitBtn.textContent = OFFICIAL_SUBMIT_LABEL;
-  officialSubmitBtn.title = 'Submit your official bracket picks (needs champion through 4th place)';
+  officialSubmitBtn.textContent = alreadySubmitted ? OFFICIAL_RESUBMIT_LABEL : OFFICIAL_SUBMIT_LABEL;
+  officialSubmitBtn.title = alreadySubmitted
+    ? 'Save an updated Official Bracket submission (re-submits are allowed)'
+    : 'Submit your official bracket picks (needs champion through 4th place)';
 }
 
 // Submit appears twice (desktop toolbar + mobile bottom bar); toggle both together.
@@ -1108,8 +1110,9 @@ async function handleOfficialSubmit() {
     clearTimeout(officialSaveTimer);
     officialSaveTimer = null;
   }
+  officialSubmitting = true;
   officialSubmittedAt = new Date().toISOString();
-  setOfficialSubmitButton(true, 'Submitting…');
+  refreshOfficialSubmitUI();
   setOfficialSaveStatus('Submitting…');
   try {
     const saved = await savePicks(
@@ -1130,6 +1133,7 @@ async function handleOfficialSubmit() {
     setOfficialSaveStatus('Not submitted');
     showAlert(`❌ Couldn't submit your official picks: ${err.message}`, 'error');
   } finally {
+    officialSubmitting = false;
     refreshOfficialSubmitUI();
   }
 }
