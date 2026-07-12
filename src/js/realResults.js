@@ -76,10 +76,10 @@ export const REAL_MATCH_WINNERS = {
   'M96': 'Switzerland',      // 4-3 pens vs Colombia (Jul 7)
 
   // ── Quarter-finals (Jul 9–11) ─────────────────────────────────────
-  // 'M97': 'team',
-  // 'M98': 'team',
-  // 'M99': 'team',
-  // 'M100': 'team',
+  // 'M97': 'France',       // 2-0 vs Morocco (Jul 9)
+  // 'M98': 'Spain',        // 2-1 vs Belgium (Jul 10)
+  // 'M99': 'England',      // 2-1 vs Norway AET (Jul 11)
+  // 'M100': 'team',        // to be updated (Jul 11)
 
   // ── Semi-finals (Jul 14–15) ───────────────────────────────────────
   // 'M101': 'team',
