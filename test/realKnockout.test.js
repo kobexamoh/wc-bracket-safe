@@ -76,8 +76,8 @@ describe('getLockedMatchIds', () => {
     assert.ok(locked.has('M89'), 'R16 M89 should be locked');
     assert.ok(locked.has('M96'), 'R16 M96 should be locked');
     assert.ok(locked.has('M97'), 'QF M97 should be locked');
-    assert.ok(locked.has('M99'), 'QF M99 should be locked');
-    assert.ok(!locked.has('M100'), 'M100 QF should still be pickable');
+    assert.ok(locked.has('M100'), 'QF M100 should be locked');
+    assert.ok(!locked.has('M101'), 'M101 SF should still be pickable');
   });
 });
 
@@ -129,15 +129,15 @@ describe('applyRealWinnerPick', () => {
     assert.ok(!result.M73, 'Locked match M73 should not appear in user picks');
   });
 
-  it('allows picking an unlocked quarter-final match', () => {
-    const result = applyRealWinnerPick({}, 'M100', 'A');
-    assert.equal(result.M100, 'A');
+  it('allows picking an unlocked semi-final match', () => {
+    const result = applyRealWinnerPick({}, 'M101', 'A');
+    assert.equal(result.M101, 'A');
   });
 
   it('toggles off on same-side re-pick', () => {
-    const first = applyRealWinnerPick({}, 'M100', 'A');
-    assert.equal(first.M100, 'A');
-    const second = applyRealWinnerPick(first, 'M100', 'A');
-    assert.ok(!second.M100, 'Re-picking same side should clear');
+    const first = applyRealWinnerPick({}, 'M101', 'A');
+    assert.equal(first.M101, 'A');
+    const second = applyRealWinnerPick(first, 'M101', 'A');
+    assert.ok(!second.M101, 'Re-picking same side should clear');
   });
 });
