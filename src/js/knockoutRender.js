@@ -169,21 +169,27 @@ function renderCenterColumn(bracket, winners, lockedSet, flagExt = 'svg') {
 }
 
 /**
- * Athletic-inspired bracket tree: left half → final/champion ← right half,
- * with connector lines between paired matches.
+ * Athletic-inspired bracket tree: left half → final/champion ← right half.
+ * Connector arms are an SVG overlay painted after layout (see bracketConnectors.js).
  */
 export function renderKnockoutTree(bracket, winners = {}, options = {}) {
   const lockedMatches = options.lockedMatches ?? new Set();
   const flagExt = options.flagExt ?? 'svg';
   const hidePodiumCta = options.hidePodiumCta ?? false;
+  const hideScrollHint = options.hideScrollHint ?? false;
   const podiumBtn = !hidePodiumCta && bracket.championTeam
     ? `<div class="knockout-podium-cta"><button type="button" class="btn btn-primary btn-sm" id="viewPodiumBtn">View your podium picks</button></div>`
     : '';
+  const scrollHint = hideScrollHint
+    ? ''
+    : `<p class="knockout-scroll-hint" hidden>Swipe or scroll sideways to see the full bracket</p>`;
 
   return `
     <div class="knockout-canvas">
+      ${scrollHint}
       <div class="knockout-scroll">
         <div class="knockout-bracket">
+          <svg class="bracket-lines" aria-hidden="true" focusable="false"></svg>
           ${renderHalf('left', bracket, winners, lockedMatches, flagExt)}
           ${renderCenterColumn(bracket, winners, lockedMatches, flagExt)}
           ${renderHalf('right', bracket, winners, lockedMatches, flagExt)}

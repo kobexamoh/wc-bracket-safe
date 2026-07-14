@@ -89,7 +89,7 @@ test('final and champion resolve from semi-final winners', () => {
   assert.equal(bracket.championTeam, bracket.final[0].b.team);
 });
 
-test('knockout tree renders left/right halves with flags (connectors deferred)', () => {
+test('knockout tree renders left/right halves with flags and SVG connector slot', () => {
   const picks = makePicksWithKnownThirds();
   const qualifying = ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
   const bracket = buildKnockoutBracket(picks, qualifying, {});
@@ -105,13 +105,23 @@ test('knockout tree renders left/right halves with flags (connectors deferred)',
   assert.match(html, /data-match="M104"/);
   assert.match(html, /data-match="M103"/);
   assert.match(html, /class="bracket-team__flag"/);
+  assert.match(html, /svg class="bracket-lines"/);
+  assert.match(html, /knockout-scroll-hint/);
   assert.doesNotMatch(html, /bracket-join/);
-  assert.doesNotMatch(html, /bracket-connector/);
   assert.doesNotMatch(html, /Feeds/);
   assert.doesNotMatch(html, /bracket-match__id/);
   assert.doesNotMatch(html, /bracket-team__seed/);
   assert.doesNotMatch(html, /champion-display/);
   assert.match(html, /knockout-canvas/);
+});
+
+test('knockout export tree can hide the scroll hint', () => {
+  const picks = makePicksWithKnownThirds();
+  const qualifying = ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+  const bracket = buildKnockoutBracket(picks, qualifying, {});
+  const html = renderKnockoutTree(bracket, {}, { hideScrollHint: true, hidePodiumCta: true });
+  assert.doesNotMatch(html, /knockout-scroll-hint/);
+  assert.match(html, /svg class="bracket-lines"/);
 });
 
 test('semi-finals render in a horizontal row flanking the final', () => {
