@@ -830,6 +830,24 @@ header p {
   z-index: 1;
 }
 
+/* Official Bracket endgame: semis + final (+ third) only — fits a laptop viewport. */
+.knockout-bracket--endgame {
+  justify-content: center;
+  min-width: 0;
+  width: 100%;
+  gap: 0;
+}
+
+.knockout-bracket--endgame .bracket-center {
+  min-width: min(100%, 720px);
+  width: min(100%, 760px);
+}
+
+.knockout-bracket--from-r16,
+.knockout-bracket--from-qf {
+  justify-content: center;
+}
+
 .bracket-half {
   display: flex;
   align-items: center;

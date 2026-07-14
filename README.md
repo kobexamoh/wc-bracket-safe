@@ -252,7 +252,7 @@ The launch did exactly one thing well and saved the rest for daylight:
 - **A celebratory finish — shipped.** Submitting now gets a confirmation moment and a brief, reduced-motion-aware confetti burst in green and gold (Chapter VIII).
 - **Cross-platform flags — shipped.** Real self-hosted SVG flags replaced the emoji, so nothing falls back to letter-boxes on Windows — in the live UI and the screenshot alike (Chapter IX).
 - **Login hero — shipped (Chapter X).** Swiss sign-in layout, pitch mini-animation, auth-confirm modal, Cursor-style arrow submit, warm cream background.
-- **Phase 2 — knockout + Official Bracket — mostly shipped.** Stage tabs, real-results Official Bracket, submit/export/Slack. Viewport polish (SVG connector arms, export width fit, 1080p centering / swipe hint) ships with this PR.
+- **Phase 2 — knockout + Official Bracket — mostly shipped.** Stage tabs, real-results Official Bracket, submit/export/Slack. Viewport polish ships SVG connector arms, export width fit, scroll cues, and an Official Bracket **endgame view** (semis → final) that fits a laptop without horizontal scroll.
 - **Phase 3** — a scoring engine and a leaderboard, so the per-round prizes have something to measure. *(This is the part I promised coworkers out loud before building it, which is the traditional order of operations.)*
 
 ---

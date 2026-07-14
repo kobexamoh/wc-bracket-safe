@@ -97,7 +97,7 @@ function buildExportNode(doc, picks, width, title) {
   return node;
 }
 
-function buildKnockoutExportNode(doc, bracket, winners, lockedMatches, width, title) {
+function buildKnockoutExportNode(doc, bracket, winners, lockedMatches, width, title, startRound = 'r32') {
   const node = doc.createElement('div');
   node.className = 'bracket-export bracket-export--knockout';
   node.style.width = `${width}px`;
@@ -117,6 +117,7 @@ function buildKnockoutExportNode(doc, bracket, winners, lockedMatches, width, ti
     flagExt: 'png',
     hidePodiumCta: true,
     hideScrollHint: true,
+    startRound,
   }));
   return node;
 }
@@ -213,9 +214,18 @@ export async function downloadOfficialKnockoutImage(bracket, winners, lockedMatc
     title = officialBracketTitle(name),
     filename = officialBracketFilename(name),
     width: requestedWidth = KNOCKOUT_EXPORT_WIDTH,
+    startRound = 'sf',
   } = options;
 
-  const node = buildKnockoutExportNode(doc, bracket, winners, lockedMatches, requestedWidth, title);
+  const node = buildKnockoutExportNode(
+    doc,
+    bracket,
+    winners,
+    lockedMatches,
+    requestedWidth,
+    title,
+    startRound,
+  );
   doc.body.appendChild(node);
 
   try {

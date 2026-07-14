@@ -877,7 +877,10 @@ function renderOfficialBracketUI() {
 
   try {
     const { bracket, mergedWinners, lockedSet } = buildRealResultsBracket(officialWinners);
-    officialBracketTree.innerHTML = renderKnockoutTree(bracket, mergedWinners, { lockedMatches: lockedSet });
+    officialBracketTree.innerHTML = renderKnockoutTree(bracket, mergedWinners, {
+      lockedMatches: lockedSet,
+      startRound: 'sf',
+    });
   } catch (err) {
     officialBracketTree.innerHTML = `<div class="alert error">${err.message}</div>`;
   }
