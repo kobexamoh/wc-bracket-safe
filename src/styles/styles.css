@@ -635,10 +635,19 @@ header p {
 
 .bracket-export--knockout .knockout-scroll {
   overflow: visible;
+  background: #ffffff;
 }
 
 .bracket-export--knockout .knockout-bracket {
-  gap: 32px;
+  gap: 28px;
+}
+
+.bracket-export--knockout .bracket-center {
+  min-width: 560px;
+}
+
+.bracket-export--knockout .bracket-lines {
+  color: rgba(15, 23, 42, 0.35);
 }
 
 .third-place-info {
@@ -673,10 +682,17 @@ header p {
 
 .third-place-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
   gap: 12px;
   max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
+}
+
+/* Keep Third Place cards from stretching the page wider than the masthead. */
+[data-stage-panel="third"] {
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 .third-place-card {
@@ -752,6 +768,20 @@ header p {
     0 1px 2px rgba(15, 23, 42, 0.06),
     0 8px 24px rgba(15, 23, 42, 0.07);
   padding: 16px 12px 12px;
+  position: relative;
+}
+
+.knockout-scroll-hint {
+  margin: 0 8px 10px;
+  padding: 8px 12px;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  color: var(--navy);
+  background: rgba(0, 122, 51, 0.08);
+  border: 1px solid rgba(0, 122, 51, 0.22);
+  border-radius: 8px;
+  text-align: center;
+  letter-spacing: 0.01em;
 }
 
 .knockout-scroll {
@@ -759,6 +789,7 @@ header p {
   -webkit-overflow-scrolling: touch;
   margin: 0;
   padding: 4px 8px 12px;
+  scroll-padding-inline: 24px;
 }
 
 .knockout-podium-cta {
@@ -780,6 +811,41 @@ header p {
   min-width: min-content;
   padding: 8px 4px 16px;
   --bracket-round-gap: clamp(20px, 3vw, 48px);
+  position: relative;
+}
+
+.bracket-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 0;
+  color: rgba(15, 23, 42, 0.28);
+}
+
+.knockout-bracket > .bracket-half,
+.knockout-bracket > .bracket-center {
+  position: relative;
+  z-index: 1;
+}
+
+/* Official Bracket endgame: semis + final (+ third) only — fits a laptop viewport. */
+.knockout-bracket--endgame {
+  justify-content: center;
+  min-width: 0;
+  width: 100%;
+  gap: 0;
+}
+
+.knockout-bracket--endgame .bracket-center {
+  min-width: min(100%, 720px);
+  width: min(100%, 760px);
+}
+
+.knockout-bracket--from-r16,
+.knockout-bracket--from-qf {
+  justify-content: center;
 }
 
 .bracket-half {
@@ -796,7 +862,7 @@ header p {
   justify-content: center;
   gap: 20px;
   flex: 0 0 auto;
-  min-width: min(100%, 720px);
+  min-width: min(100%, 640px);
   padding: 0 8px;
 }
 
@@ -899,8 +965,6 @@ header p {
   gap: 28px;
 }
 
-/* Connector lines deferred — pure CSS cannot align forks across our split
-   layout + variable card heights. Revisit with leader-line or export-only SVG. */
 .bracket-pair-matches {
   display: flex;
   flex-direction: column;
@@ -1080,6 +1144,11 @@ header p {
     padding: 12px 8px 8px;
   }
 
+  .knockout-scroll-hint {
+    margin: 0 4px 8px;
+    padding: 7px 10px;
+  }
+
   .knockout-bracket {
     gap: 20px;
     padding-bottom: 24px;
@@ -1109,6 +1178,35 @@ header p {
 
   .bracket-center {
     min-width: 180px;
+  }
+
+  /* Mobile cascade stacks the center, so horizontal arms get messy — hide overlay. */
+  .bracket-lines {
+    display: none;
+  }
+}
+
+/* Tablet / 1080p: keep the tree denser so more fits before scroll. */
+@media (min-width: 769px) and (max-width: 1400px) {
+  .knockout-bracket {
+    gap: clamp(16px, 2.2vw, 36px);
+    --bracket-round-gap: clamp(14px, 2vw, 28px);
+  }
+
+  .bracket-round {
+    min-width: 176px;
+  }
+
+  .bracket-match {
+    min-width: 176px;
+  }
+
+  .bracket-center {
+    min-width: min(100%, 520px);
+  }
+
+  .bracket-round--final .bracket-match {
+    min-width: 200px;
   }
 }
 

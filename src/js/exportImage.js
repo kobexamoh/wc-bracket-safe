@@ -14,9 +14,11 @@
 
 import { renderBracket } from './bracketData.js';
 import { renderKnockoutTree } from './knockoutRender.js';
+import { drawBracketConnectors } from './bracketConnectors.js';
 
 const EXPORT_WIDTH = 1024;
 const KNOCKOUT_EXPORT_WIDTH = 1920;
+const KNOCKOUT_EXPORT_PAD = 48;
 
 /** Dated, collision-resistant filename, e.g. `wc-bracket-2026-06-17.png`. */
 export function screenshotFilename(date = new Date()) {
@@ -95,7 +97,7 @@ function buildExportNode(doc, picks, width, title) {
   return node;
 }
 
-function buildKnockoutExportNode(doc, bracket, winners, lockedMatches, width, title) {
+function buildKnockoutExportNode(doc, bracket, winners, lockedMatches, width, title, startRound = 'r32') {
   const node = doc.createElement('div');
   node.className = 'bracket-export bracket-export--knockout';
   node.style.width = `${width}px`;
@@ -114,8 +116,23 @@ function buildKnockoutExportNode(doc, bracket, winners, lockedMatches, width, ti
     lockedMatches,
     flagExt: 'png',
     hidePodiumCta: true,
+    hideScrollHint: true,
+    startRound,
   }));
   return node;
+}
+
+/**
+ * Grow the export card to the knockout tree's natural width so html2canvas
+ * doesn't clip the right half (common at a fixed 1920px on dense layouts).
+ */
+function fitKnockoutExportWidth(node, minWidth) {
+  const bracket = node.querySelector('.knockout-bracket');
+  if (!bracket) return minWidth;
+  const contentWidth = Math.ceil(bracket.scrollWidth) + KNOCKOUT_EXPORT_PAD;
+  const fitted = Math.max(minWidth, contentWidth);
+  node.style.width = `${fitted}px`;
+  return fitted;
 }
 
 /**
@@ -196,19 +213,34 @@ export async function downloadOfficialKnockoutImage(bracket, winners, lockedMatc
     name = '',
     title = officialBracketTitle(name),
     filename = officialBracketFilename(name),
-    width = KNOCKOUT_EXPORT_WIDTH,
+    width: requestedWidth = KNOCKOUT_EXPORT_WIDTH,
+    startRound = 'sf',
   } = options;
 
-  const node = buildKnockoutExportNode(doc, bracket, winners, lockedMatches, width, title);
+  const node = buildKnockoutExportNode(
+    doc,
+    bracket,
+    winners,
+    lockedMatches,
+    requestedWidth,
+    title,
+    startRound,
+  );
   doc.body.appendChild(node);
 
   try {
     await waitForImages(node);
+    // Layout must settle before measuring width / drawing connector arms.
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const width = fitKnockoutExportWidth(node, requestedWidth);
+    drawBracketConnectors(node.querySelector('.knockout-bracket'));
+
     const html2canvas = await loadHtml2canvas();
     const canvas = await html2canvas(node, {
       scale: 2,
       backgroundColor: '#ffffff',
       windowWidth: width,
+      width,
       useCORS: true,
       logging: false,
     });

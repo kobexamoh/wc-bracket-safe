@@ -130,15 +130,21 @@ function renderSingleMatchColumn(title, match, winners, { emphasis = false, lock
   `;
 }
 
-function renderHalf(side, bracket, winners, lockedSet, flagExt = 'svg') {
+function renderHalf(side, bracket, winners, lockedSet, flagExt = 'svg', startRound = 'r32') {
   const layout = BRACKET_LAYOUT[side];
   const matchById = indexMatches(bracket);
   const reverse = side === 'right';
-  const rounds = [
-    renderRoundColumn('Round of 32', layout.r32, matchById, winners, lockedSet, flagExt),
-    renderRoundColumn('Round of 16', layout.r16, matchById, winners, lockedSet, flagExt),
-    renderSoloFeedRound('Quarter-finals', layout.qf, matchById, winners, lockedSet, flagExt),
-  ];
+  const rounds = [];
+  if (startRound === 'r32') {
+    rounds.push(renderRoundColumn('Round of 32', layout.r32, matchById, winners, lockedSet, flagExt));
+  }
+  if (startRound === 'r32' || startRound === 'r16') {
+    rounds.push(renderRoundColumn('Round of 16', layout.r16, matchById, winners, lockedSet, flagExt));
+  }
+  if (startRound === 'r32' || startRound === 'r16' || startRound === 'qf') {
+    rounds.push(renderSoloFeedRound('Quarter-finals', layout.qf, matchById, winners, lockedSet, flagExt));
+  }
+  if (rounds.length === 0) return '';
   return `
     <div class="bracket-half bracket-half--${side}">
       ${reverse ? rounds.reverse().join('') : rounds.join('')}
@@ -169,27 +175,46 @@ function renderCenterColumn(bracket, winners, lockedSet, flagExt = 'svg') {
 }
 
 /**
- * Athletic-inspired bracket tree: left half → final/champion ← right half,
- * with connector lines between paired matches.
+ * Athletic-inspired bracket tree: left half → final/champion ← right half.
+ * Connector arms are an SVG overlay painted after layout (see bracketConnectors.js).
+ *
+ * options.startRound: 'r32' | 'r16' | 'qf' | 'sf'
+ *   Truncates early rounds (Official Bracket uses 'sf' in the endgame).
  */
 export function renderKnockoutTree(bracket, winners = {}, options = {}) {
   const lockedMatches = options.lockedMatches ?? new Set();
   const flagExt = options.flagExt ?? 'svg';
   const hidePodiumCta = options.hidePodiumCta ?? false;
+  const hideScrollHint = options.hideScrollHint ?? false;
+  const startRound = normalizeStartRound(options.startRound);
+  const showHalves = startRound !== 'sf';
   const podiumBtn = !hidePodiumCta && bracket.championTeam
     ? `<div class="knockout-podium-cta"><button type="button" class="btn btn-primary btn-sm" id="viewPodiumBtn">View your podium picks</button></div>`
     : '';
+  const scrollHint = hideScrollHint
+    ? ''
+    : `<p class="knockout-scroll-hint" hidden>Swipe or scroll sideways to see the full bracket</p>`;
+  const left = showHalves ? renderHalf('left', bracket, winners, lockedMatches, flagExt, startRound) : '';
+  const right = showHalves ? renderHalf('right', bracket, winners, lockedMatches, flagExt, startRound) : '';
+  const roundMod = startRound === 'sf' ? ' knockout-bracket--endgame' : ` knockout-bracket--from-${startRound}`;
 
   return `
     <div class="knockout-canvas">
+      ${scrollHint}
       <div class="knockout-scroll">
-        <div class="knockout-bracket">
-          ${renderHalf('left', bracket, winners, lockedMatches, flagExt)}
+        <div class="knockout-bracket${roundMod}">
+          <svg class="bracket-lines" aria-hidden="true" focusable="false"></svg>
+          ${left}
           ${renderCenterColumn(bracket, winners, lockedMatches, flagExt)}
-          ${renderHalf('right', bracket, winners, lockedMatches, flagExt)}
+          ${right}
         </div>
       </div>
       ${podiumBtn}
     </div>
   `;
+}
+
+function normalizeStartRound(value) {
+  if (value === 'r16' || value === 'qf' || value === 'sf') return value;
+  return 'r32';
 }

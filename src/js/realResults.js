@@ -82,7 +82,7 @@ export const REAL_MATCH_WINNERS = {
   'M100': 'Argentina',       // 3-1 vs Switzerland (Jul 11)
 
   // ── Semi-finals (Jul 14–15) ───────────────────────────────────────
-  // 'M101': 'team',
+  'M101': 'Spain',         // 2-0 vs France (Jul 14)
   // 'M102': 'team',
 
   // ── Third-place match (Jul 18) & Final (Jul 19) ───────────────────

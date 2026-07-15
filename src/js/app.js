@@ -17,6 +17,7 @@ import { downloadBracketImage, downloadOfficialKnockoutImage } from './exportIma
 import { celebrate } from './celebrate.js';
 import { getThirdPlaceCandidates, buildKnockoutBracket, applyWinnerPick, getPodiumPlacements } from './knockout.js';
 import { renderKnockoutTree } from './knockoutRender.js';
+import { drawBracketConnectors } from './bracketConnectors.js';
 import {
   buildRealResultsBracket,
   applyRealWinnerPick,
@@ -694,10 +695,63 @@ function renderKnockoutUI() {
     knockoutEl.innerHTML = `<div class="alert error">${err.message}</div>`;
   }
 
-  const newScrollEl = knockoutEl.querySelector('.knockout-scroll');
-  if (newScrollEl && savedScrollLeft > 0) {
-    newScrollEl.scrollLeft = savedScrollLeft;
+  polishKnockoutViewport(knockoutEl, savedScrollLeft);
+}
+
+/**
+ * After a knockout tree paint: restore (or auto-center) scroll, draw SVG arms,
+ * and surface a swipe/scroll hint when the tree overflows the viewport.
+ */
+function polishKnockoutViewport(root, savedScrollLeft = 0) {
+  if (!root) return;
+  const bracketRoot = root.querySelector('.knockout-bracket');
+  const scrollEl = root.querySelector('.knockout-scroll');
+  const hint = root.querySelector('.knockout-scroll-hint');
+
+  const paint = () => {
+    drawBracketConnectors(bracketRoot);
+    if (!scrollEl) return;
+
+    if (savedScrollLeft > 0) {
+      scrollEl.scrollLeft = savedScrollLeft;
+    } else {
+      centerKnockoutScroll(scrollEl);
+    }
+
+    syncKnockoutScrollHint(scrollEl, hint);
+  };
+
+  // Double rAF: wait until layout (and font/flags) settle before measuring arms.
+  requestAnimationFrame(() => requestAnimationFrame(paint));
+}
+
+function centerKnockoutScroll(scrollEl) {
+  const maxScroll = scrollEl.scrollWidth - scrollEl.clientWidth;
+  if (maxScroll <= 0) return;
+  const center = scrollEl.querySelector('.bracket-center');
+  if (!center) {
+    scrollEl.scrollLeft = Math.round(maxScroll / 2);
+    return;
   }
+  const target = center.offsetLeft + center.offsetWidth / 2 - scrollEl.clientWidth / 2;
+  scrollEl.scrollLeft = Math.max(0, Math.min(maxScroll, Math.round(target)));
+}
+
+function syncKnockoutScrollHint(scrollEl, hint) {
+  if (!hint || !scrollEl) return;
+  const overflows = scrollEl.scrollWidth > scrollEl.clientWidth + 24;
+  if (!overflows) {
+    hint.hidden = true;
+    return;
+  }
+  hint.hidden = false;
+  if (hint.dataset.bound === '1') return;
+  hint.dataset.bound = '1';
+  const dismiss = () => {
+    hint.hidden = true;
+    scrollEl.removeEventListener('scroll', dismiss);
+  };
+  scrollEl.addEventListener('scroll', dismiss, { passive: true });
 }
 
 function openChampionModal() {
@@ -823,15 +877,15 @@ function renderOfficialBracketUI() {
 
   try {
     const { bracket, mergedWinners, lockedSet } = buildRealResultsBracket(officialWinners);
-    officialBracketTree.innerHTML = renderKnockoutTree(bracket, mergedWinners, { lockedMatches: lockedSet });
+    officialBracketTree.innerHTML = renderKnockoutTree(bracket, mergedWinners, {
+      lockedMatches: lockedSet,
+      startRound: 'sf',
+    });
   } catch (err) {
     officialBracketTree.innerHTML = `<div class="alert error">${err.message}</div>`;
   }
 
-  const newScrollEl = officialBracketTree.querySelector('.knockout-scroll');
-  if (newScrollEl && savedScrollLeft > 0) {
-    newScrollEl.scrollLeft = savedScrollLeft;
-  }
+  polishKnockoutViewport(officialBracketTree, savedScrollLeft);
   refreshOfficialSubmitUI();
 }
 
@@ -1656,6 +1710,22 @@ window.addEventListener('pagehide', () => {
   if (draftTimer) flushDraft();
   if (knockoutTimer) flushKnockoutSave();
   if (officialSaveTimer) flushOfficialSave();
+});
+
+// Keep SVG connector arms aligned after orientation / window resize.
+let connectorResizeTimer = null;
+window.addEventListener('resize', () => {
+  if (connectorResizeTimer) clearTimeout(connectorResizeTimer);
+  connectorResizeTimer = setTimeout(() => {
+    for (const root of [knockoutEl, officialBracketTree]) {
+      if (!root) continue;
+      const bracketRoot = root.querySelector('.knockout-bracket');
+      if (bracketRoot) drawBracketConnectors(bracketRoot);
+      const scrollEl = root.querySelector('.knockout-scroll');
+      const hint = root.querySelector('.knockout-scroll-hint');
+      if (scrollEl && hint) syncKnockoutScrollHint(scrollEl, hint);
+    }
+  }, 120);
 });
 
 // Check authentication on page load
