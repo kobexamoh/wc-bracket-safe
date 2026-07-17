@@ -6,7 +6,7 @@
     <title>2026 D+C Unofficial WC Bracket Predictor</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700;800&family=Faustina:wght@400;600;700&display=swap">
     <link rel="stylesheet" href="/src/styles/styles.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
 </head>
@@ -14,9 +14,9 @@
     <header>
         <div class="header-inner">
             <div class="header-title">
-                <h1>⚽ 2026 World Cup Bracket Predictor — <span id="headerStageLabel">Group Stage</span></h1>
+                <h1>⚽ 2026 World Cup Bracket Predictor — <span id="headerStageLabel">The Final Round</span></h1>
                 <!-- Small subtitle under the h1; shown only once logged in (toggled in app.js). On the sign-in screen the tagline lives in the grey area instead. -->
-                <p id="headerTagline" style="display: none;">Try your hand at predicting the group stage order and eventual tournament winners, and share your picks with the rest of the Digital + Creative team</p>
+                <p id="headerTagline" style="display: none;">Spain vs Argentina in the Final. Pick the champion and the third-place match, then share your picks with the rest of the Digital + Creative team.</p>
             </div>
             <div id="headerActions" class="header-actions" style="display: none;">
                 <span id="userInfo" class="header-user"></span>
@@ -29,7 +29,7 @@
         <!-- Auth Section: Swiss 2-col on desktop; offset pitch on tablet; frame hidden on phones -->
         <div id="authSection" class="login-hero">
             <div class="login-hero__content">
-                <h2 class="login-hero__headline">Try your hand at predicting the group stage order and eventual tournament winners.</h2>
+                <h2 class="login-hero__headline">Try your hand at predicting the final results of the tournament.</h2>
                 <p class="login-hero__subline">Share your picks with the rest of the Digital + Creative team.</p>
                 <!-- Single in-place status for the sign-in screen (the bracket screen has its own messages rail) -->
                 <div id="authAlerts" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -75,7 +75,20 @@
             <div class="bracket-topbar">
                 <div class="topbar-actions">
                     <label class="name-field">
-                        <span class="name-field__label">Your name</span>
+                        <span class="name-field__label">
+                            Your name
+                            <button
+                                type="button"
+                                id="nameFieldHelpBtn"
+                                class="name-field__help"
+                                aria-expanded="false"
+                                aria-controls="nameFieldTip"
+                                title="Why we ask for your name"
+                            >?</button>
+                        </span>
+                        <span id="nameFieldTip" class="name-field__tip" role="tooltip" hidden>
+                            Add your name for the leaderboard and your screenshotted bracket.
+                        </span>
                         <input id="displayNameInput" type="text" maxlength="40" autocomplete="name" placeholder="for your screenshot">
                     </label>
                 </div>
@@ -85,7 +98,7 @@
                 <button type="button" class="stage-btn stage-btn--active" data-stage="groups">Group Stage</button>
                 <button type="button" class="stage-btn stage-btn--disabled" data-stage="third" disabled>Third Place</button>
                 <button type="button" class="stage-btn stage-btn--disabled" data-stage="knockout" disabled>Knockout</button>
-                <button type="button" class="stage-btn" data-stage="officialBracket">Official Bracket</button>
+                <button type="button" class="stage-btn" data-stage="officialBracket">Final Round</button>
             </nav>
 
             <div id="bracketLayout" class="bracket-layout">
@@ -132,14 +145,11 @@
                     <div id="knockout" class="stage-panel" data-stage-panel="knockout" hidden></div>
 
                     <div id="officialBracket" class="stage-panel" data-stage-panel="officialBracket" hidden>
-                        <div class="official-bracket-info">
-                            <h2>Official Bracket</h2>
-                            <p class="official-bracket-info__lead">Endgame time. Quarters are locked — pick the semis, final, and third-place match to crown your champion.</p>
-                        </div>
                         <div class="official-bracket-toolbar">
                             <span id="officialSaveStatus" class="save-status" role="status" aria-live="polite"></span>
                             <div class="official-bracket-actions">
                                 <button id="officialExportBtn" type="button" class="btn btn-ghost" title="Download your official bracket as an image to share">Screenshot bracket (PNG)</button>
+                                <button id="viewOfficialPodiumBtn" type="button" class="btn btn-ghost" hidden title="See your 1st–4th podium picks">View podium picks</button>
                                 <button id="officialSubmitBtn" type="button" class="btn btn-primary" hidden title="Submit your official bracket picks (needs champion through 4th place)">Submit official picks</button>
                             </div>
                         </div>

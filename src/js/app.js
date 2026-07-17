@@ -28,6 +28,8 @@ import {
   isThirdPlaceComplete,
   getStageNavState,
   STAGE_HEADER_LABELS,
+  STAGE_HEADER_TAGLINES,
+  OFFICIAL_ONLY_MODE,
 } from './stageNav.js';
 import { mountBallChase } from './ballChase.js';
 import { saveDraft, readDraft, clearDraft, shouldRestoreDraft } from './draftStore.js';
@@ -200,19 +202,24 @@ function showBracketSection() {
   if (headerTagline) headerTagline.style.display = 'block'; // small subtitle under the h1 once logged in
   wasAllGroupsRanked = allGroupsRanked(picks);
   if (!bracketSectionInitialized) {
-    const last = loadLastStage();
-    if (last === 'third' && allGroupsRanked(picks)) {
-      setActiveStage('third');
-    } else if (last === 'knockout' && isThirdPlaceComplete(selectedThirdGroups)) {
-      setActiveStage('knockout');
-    } else if (last === 'officialBracket') {
-      setActiveStage('officialBracket');
-    } else if (last === 'groups') {
-      setActiveStage('groups');
-    } else if (isGroupStageSubmitLocked()) {
+    // Final week: only Official / Final Round is open — skip remembered group/third/knockout.
+    if (OFFICIAL_ONLY_MODE) {
       setActiveStage('officialBracket');
     } else {
-      setActiveStage('groups');
+      const last = loadLastStage();
+      if (last === 'third' && allGroupsRanked(picks)) {
+        setActiveStage('third');
+      } else if (last === 'knockout' && isThirdPlaceComplete(selectedThirdGroups)) {
+        setActiveStage('knockout');
+      } else if (last === 'officialBracket') {
+        setActiveStage('officialBracket');
+      } else if (last === 'groups') {
+        setActiveStage('groups');
+      } else if (isGroupStageSubmitLocked()) {
+        setActiveStage('officialBracket');
+      } else {
+        setActiveStage('groups');
+      }
     }
     bracketSectionInitialized = true;
   }
@@ -399,6 +406,7 @@ const officialBracketEl = document.getElementById('officialBracket');
 const officialBracketTree = document.getElementById('officialBracketTree');
 const officialExportBtn = document.getElementById('officialExportBtn');
 const officialSubmitBtn = document.getElementById('officialSubmitBtn');
+const viewOfficialPodiumBtn = document.getElementById('viewOfficialPodiumBtn');
 const officialSaveStatusEl = document.getElementById('officialSaveStatus');
 
 const SUBMIT_LABEL_OPEN = 'Submit bracket';
@@ -478,6 +486,9 @@ function refreshOfficialSubmitUI() {
   if (!officialSubmitBtn) return;
   const complete = isOfficialPodiumComplete();
   officialSubmitBtn.hidden = !complete && !officialSubmitting;
+  if (viewOfficialPodiumBtn) {
+    viewOfficialPodiumBtn.hidden = !complete;
+  }
   if (officialSubmitting) {
     officialSubmitBtn.disabled = true;
     officialSubmitBtn.textContent = 'Submitting…';
@@ -553,6 +564,10 @@ function scheduleStageAdvance(nextStage) {
 }
 
 function reconcileActiveStage() {
+  if (OFFICIAL_ONLY_MODE) {
+    if (activeStage !== 'officialBracket') setActiveStage('officialBracket');
+    return;
+  }
   if (activeStage === 'third' && !allGroupsRanked(picks)) {
     setActiveStage('groups');
     return;
@@ -565,21 +580,34 @@ function reconcileActiveStage() {
 function updateStageNav() {
   if (!stageNav) return;
   const state = getStageNavState(picks, selectedThirdGroups, activeStage);
+  let visibleCount = 0;
   for (const btn of stageNav.querySelectorAll('[data-stage]')) {
     const key = btn.dataset.stage;
     const entry = state[key];
     if (!entry) continue;
+    const hidden = !!entry.hidden;
+    btn.hidden = hidden;
+    if (!hidden) visibleCount += 1;
     btn.classList.toggle('stage-btn--active', entry.active);
     btn.classList.toggle('stage-btn--completed', entry.completed && !entry.active);
     btn.classList.toggle('stage-btn--disabled', !!entry.disabled);
     btn.disabled = !!entry.disabled;
     btn.setAttribute('aria-current', entry.active ? 'step' : 'false');
+    if (key === 'officialBracket' && STAGE_HEADER_LABELS.officialBracket) {
+      btn.textContent = STAGE_HEADER_LABELS.officialBracket;
+    }
   }
+  // One usable stage left (or final-week official-only) — hide the tab strip.
+  stageNav.hidden = OFFICIAL_ONLY_MODE || visibleCount <= 1;
 }
 
 function setActiveStage(stage) {
-  if (stage === 'third' && !allGroupsRanked(picks)) return;
-  if (stage === 'knockout' && !isThirdPlaceComplete(selectedThirdGroups)) return;
+  if (OFFICIAL_ONLY_MODE) {
+    stage = 'officialBracket';
+  } else {
+    if (stage === 'third' && !allGroupsRanked(picks)) return;
+    if (stage === 'knockout' && !isThirdPlaceComplete(selectedThirdGroups)) return;
+  }
 
   clearStageAutoTimer();
   const valid = ['groups', 'third', 'knockout', 'officialBracket'];
@@ -601,6 +629,13 @@ function setActiveStage(stage) {
   if (headerStageLabel) {
     headerStageLabel.textContent = STAGE_HEADER_LABELS[activeStage] || STAGE_HEADER_LABELS.groups;
   }
+  const headerTagline = document.getElementById('headerTagline');
+  if (headerTagline) {
+    headerTagline.textContent =
+      STAGE_HEADER_TAGLINES[activeStage] || STAGE_HEADER_TAGLINES.groups;
+  }
+  // Lift the Report-a-bug FAB only when the mobile group-stage submit bar is up.
+  document.body.classList.toggle('has-submit-bar-mobile', activeStage === 'groups');
 
   for (const panel of document.querySelectorAll('[data-stage-panel]')) {
     panel.hidden = panel.dataset.stagePanel !== activeStage;
@@ -707,10 +742,20 @@ function polishKnockoutViewport(root, savedScrollLeft = 0) {
   const bracketRoot = root.querySelector('.knockout-bracket');
   const scrollEl = root.querySelector('.knockout-scroll');
   const hint = root.querySelector('.knockout-scroll-hint');
+  const isEndgame = Boolean(bracketRoot?.classList.contains('knockout-bracket--endgame'));
 
   const paint = () => {
-    drawBracketConnectors(bracketRoot);
+    // Endgame is center-only (SF/Final/third) — no arms, no sideways scroll choreography.
+    if (!isEndgame) {
+      drawBracketConnectors(bracketRoot);
+    }
     if (!scrollEl) return;
+
+    if (isEndgame) {
+      scrollEl.scrollLeft = 0;
+      if (hint) hint.hidden = true;
+      return;
+    }
 
     if (savedScrollLeft > 0) {
       scrollEl.scrollLeft = savedScrollLeft;
@@ -880,6 +925,7 @@ function renderOfficialBracketUI() {
     officialBracketTree.innerHTML = renderKnockoutTree(bracket, mergedWinners, {
       lockedMatches: lockedSet,
       startRound: 'sf',
+      hidePodiumCta: true,
     });
   } catch (err) {
     officialBracketTree.innerHTML = `<div class="alert error">${err.message}</div>`;
@@ -1628,6 +1674,9 @@ if (randomBtn) randomBtn.addEventListener('click', handleSelectForMe);
 if (exportBtn) exportBtn.addEventListener('click', handleExport);
 if (officialExportBtn) officialExportBtn.addEventListener('click', handleOfficialExport);
 if (officialSubmitBtn) officialSubmitBtn.addEventListener('click', handleOfficialSubmit);
+if (viewOfficialPodiumBtn) {
+  viewOfficialPodiumBtn.addEventListener('click', () => openOfficialChampionModal());
+}
 if (nameInput) nameInput.addEventListener('input', () => {
   if (currentUser) persistName(currentUser.id, nameInput.value.trim());
 });
@@ -1727,6 +1776,30 @@ window.addEventListener('resize', () => {
     }
   }, 120);
 });
+
+// "Your name" help tip (?): click to toggle; Esc / outside click to close.
+const nameFieldHelpBtn = document.getElementById('nameFieldHelpBtn');
+const nameFieldTip = document.getElementById('nameFieldTip');
+function setNameFieldTipOpen(open) {
+  if (!nameFieldTip || !nameFieldHelpBtn) return;
+  nameFieldTip.hidden = !open;
+  nameFieldHelpBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+if (nameFieldHelpBtn && nameFieldTip) {
+  nameFieldHelpBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setNameFieldTipOpen(nameFieldTip.hidden);
+  });
+  document.addEventListener('click', (e) => {
+    if (nameFieldTip.hidden) return;
+    if (e.target.closest('.name-field')) return;
+    setNameFieldTipOpen(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setNameFieldTipOpen(false);
+  });
+}
 
 // Check authentication on page load
 document.addEventListener('DOMContentLoaded', checkAuth);

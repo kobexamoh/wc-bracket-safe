@@ -27,11 +27,11 @@ test('personalizedFilename slugifies the name and prefixes the dated base', () =
 });
 
 test('officialBracketTitle uses the name, with a neutral fallback when blank', () => {
-  assert.equal(officialBracketTitle('Kobe'), "Kobe's Official WC Bracket");
-  assert.equal(officialBracketTitle('   '), 'My Official WC Bracket');
+  assert.equal(officialBracketTitle('Kobe'), "Kobe's World Cup Finals Predictions");
+  assert.equal(officialBracketTitle('   '), 'My World Cup Finals Predictions');
 });
 
 test('officialBracketFilename slugifies the name and prefixes the dated base', () => {
-  assert.equal(officialBracketFilename('amoh', new Date(2026, 6, 6)), 'amoh-official-wc-bracket-2026-07-06.png');
-  assert.equal(officialBracketFilename('', new Date(2026, 6, 6)), 'official-wc-bracket-2026-07-06.png');
+  assert.equal(officialBracketFilename('amoh', new Date(2026, 6, 6)), 'amoh-wc-finals-predictions-2026-07-06.png');
+  assert.equal(officialBracketFilename('', new Date(2026, 6, 6)), 'wc-finals-predictions-2026-07-06.png');
 });

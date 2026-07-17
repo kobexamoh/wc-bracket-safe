@@ -9,8 +9,11 @@
   --ua-green: #007A33;
   --ua-dark-green: #275D38;
   --ua-gold: #F2CD00;
-  /* Type: a clean sans with character (deliberately not Inter); swap here to restyle everything */
-  --font-sans: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Type: Alegreya Sans (headings/UI) + Faustina (body/team names).
+     Both free on Google Fonts (OFL) — same stack for live UI + PNG export. */
+  --font-heading: 'Alegreya Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-body: 'Faustina', Georgia, 'Times New Roman', 'Liberation Serif', serif;
+  --font-sans: var(--font-heading); /* alias kept for older rules */
   /* Type scale: 1.25 modular ratio (16px base) with a larger display step at
      the top (--fs-2xl) so the page/export title reads clearly above the rest. */
   --fs-2xs: 0.625rem;   /* 10px   - micro pills (advance tag) */
@@ -28,7 +31,7 @@
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   font-size: var(--fs-base);
   background-color: var(--light-gray);
   color: var(--text);
@@ -36,44 +39,69 @@ body {
   overflow-x: hidden;
 }
 
+h1,
+h2,
+h3,
+.btn,
+.stage-btn,
+.bracket-round__title,
+.auth-form__submit,
+.feedback-fab,
+.name-field__help,
+.bracket-round__info,
+.progress-text,
+.save-status,
+.header-user {
+  font-family: var(--font-heading);
+}
+
 /* The branded masthead scrolls away with the page; the bracket toolbar is the
    single sticky layer (below), so there's no two-sticky overlap to manage. */
 header {
   background-color: var(--ua-green);
   color: white;
-  padding: 16px 20px;
+  padding: 12px 20px;
 }
 
-/* App header: title on the left, account actions (Sign Out) pinned top-right */
+/* App header: title/tagline left (~9–10 cols), account right (~2–3 cols). */
 .header-inner {
   max-width: 1500px;
   margin: 0 auto;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-wrap: nowrap;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px 20px;
 }
 
 .header-title {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
 header h1 {
-  font-size: var(--fs-2xl);
-  margin-bottom: 2px;
+  font-size: clamp(1.05rem, 2.4vw, var(--fs-2xl));
+  line-height: 1.2;
+  margin-bottom: 4px;
   font-weight: 650;
 }
 
 header p {
-  color: #ffffff;
+  color: rgba(255, 255, 255, 0.92);
   font-size: var(--fs-xs);
+  line-height: 1.35;
+  max-width: 52rem;
 }
 
 .header-actions {
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 12px;
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 8px;
+  max-width: min(240px, 28%);
+  padding-top: 2px;
 }
 
 /* Sign Out lives on the green header, so invert the ghost button for contrast */
@@ -92,12 +120,13 @@ header p {
 /* "Logged in as …" sits on the green header, so it's white + compact */
 .header-user {
   color: #ffffff;
-  font-size: var(--fs-xs);
+  font-size: var(--fs-2xs);
   font-weight: 600;
-  max-width: 40vw;
+  max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  text-align: right;
 }
 
 /* Utilities */
@@ -536,6 +565,11 @@ header p {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Author `display:flex` above would otherwise override the HTML hidden attribute. */
+.stage-nav[hidden] {
+  display: none;
+}
+
 .stage-btn {
   flex: 0 0 auto;
   padding: 10px 16px;
@@ -585,29 +619,10 @@ header p {
   display: none;
 }
 
-/* Third Place full-width picker */
+/* Official info banner removed — copy lives in the header tagline now.
+   Keep these inert so old markup/export CSS doesn't surprise us. */
 .official-bracket-info {
-  background: var(--navy);
-  color: #ffffff;
-  padding: 16px 20px;
-  border-radius: 14px;
-  text-align: center;
-  margin: 0 auto 20px;
-  max-width: 640px;
-}
-
-.official-bracket-info h2 {
-  margin: 0 0 8px;
-  font-size: var(--fs-lg);
-  font-weight: 800;
-  color: var(--gold);
-}
-
-.official-bracket-info__lead {
-  margin: 0;
-  font-size: var(--fs-xs);
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.92);
+  display: none;
 }
 
 .official-bracket-toolbar {
@@ -616,13 +631,13 @@ header p {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 14px;
-  margin: 0 auto 18px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 4px 0 12px;
+  margin: 0 auto 8px;
   max-width: 1200px;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  box-shadow: none;
 }
 
 .official-bracket-actions {
@@ -631,6 +646,24 @@ header p {
   align-items: center;
   gap: 8px;
   margin-left: auto;
+  justify-content: flex-end;
+}
+
+@media (max-width: 768px) {
+  .official-bracket-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .official-bracket-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .official-bracket-actions .btn {
+    flex: 1 1 auto;
+    text-align: center;
+  }
 }
 
 .bracket-export--knockout .knockout-scroll {
@@ -644,6 +677,29 @@ header p {
 
 .bracket-export--knockout .bracket-center {
   min-width: 560px;
+}
+
+.bracket-export--knockout .knockout-bracket--endgame {
+  max-width: 980px;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.bracket-export--knockout .knockout-bracket--endgame .bracket-center {
+  min-width: 0;
+  width: 100%;
+  max-width: 920px;
+}
+
+/* Export: keep semis readable (full names, no scale shrink). */
+.bracket-export--knockout .knockout-bracket--endgame .bracket-round--sf {
+  transform: none;
+  opacity: 0.8;
+}
+
+.bracket-export--knockout .knockout-bracket--endgame .bracket-round--sf .bracket-team__name {
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .bracket-export--knockout .bracket-lines {
@@ -830,17 +886,129 @@ header p {
   z-index: 1;
 }
 
-/* Official Bracket endgame: semis + final (+ third) only — fits a laptop viewport. */
+/* Official Bracket endgame: semis + final (+ third) only — no sideways scroll. */
+.knockout-canvas--endgame .knockout-scroll {
+  overflow-x: hidden;
+  padding-inline: 0;
+}
+
 .knockout-bracket--endgame {
   justify-content: center;
   min-width: 0;
   width: 100%;
+  max-width: 1040px;
+  margin-inline: auto;
   gap: 0;
+  padding-inline: 8px;
 }
 
 .knockout-bracket--endgame .bracket-center {
-  min-width: min(100%, 720px);
-  width: min(100%, 760px);
+  min-width: 0;
+  width: 100%;
+  max-width: 980px;
+  padding: 0;
+}
+
+/* ~12-col metaphor: SF ~2.25 | Final ~7.5 | SF ~2.25 — Final still dominant,
+   but SF cols wide enough for "Argentina" / "England" without ellipsis. */
+.knockout-bracket--endgame .bracket-center__final-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 2.25fr) minmax(0, 7.5fr) minmax(8rem, 2.25fr);
+  align-items: center;
+  gap: clamp(8px, 1.4vw, 16px);
+  width: 100%;
+}
+
+.knockout-bracket--endgame .bracket-round,
+.knockout-bracket--endgame .bracket-round--solo {
+  min-width: 0;
+  width: 100%;
+}
+
+.knockout-bracket--endgame .bracket-match,
+.knockout-bracket--endgame .bracket-round--final .bracket-match {
+  min-width: 0;
+  width: 100%;
+}
+
+/* Semis stay secondary (muted) but not scale-shrunk — scale was clipping names. */
+.knockout-bracket--endgame .bracket-round--sf {
+  opacity: 0.78;
+}
+
+.knockout-bracket--endgame .bracket-round--sf .bracket-round__title {
+  font-size: 0.65rem;
+  padding: 0 0 4px;
+  opacity: 0.75;
+  letter-spacing: 0.06em;
+  border-bottom-color: rgba(15, 23, 42, 0.08);
+}
+
+.knockout-bracket--endgame .bracket-round--sf .bracket-match {
+  padding: 5px 6px;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.knockout-bracket--endgame .bracket-round--sf .bracket-team {
+  padding: 4px 6px;
+  gap: 5px;
+  margin-top: 3px;
+}
+
+.knockout-bracket--endgame .bracket-round--sf .bracket-team__flag {
+  width: 0.9rem;
+  height: auto;
+}
+
+.knockout-bracket--endgame .bracket-round--sf .bracket-team__name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.knockout-bracket--endgame .bracket-round--third {
+  width: 100%;
+}
+
+.knockout-bracket--endgame .bracket-center__third {
+  width: min(100%, 58%); /* ~7 of 12 — closer to Final weight than to semis */
+  max-width: 480px;
+  margin-inline: auto;
+}
+
+.knockout-bracket--endgame .bracket-round--third .bracket-match {
+  min-width: 0;
+}
+
+.knockout-bracket--endgame .bracket-round--third .bracket-round__title {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+}
+
+/* Podium medals on Final (gold/silver) and third-place (bronze). */
+.bracket-team__medal {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-size: 1.05em;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(15, 23, 42, 0.18));
+}
+
+.bracket-team.has-medal--gold {
+  border-color: rgba(212, 175, 55, 0.65);
+  background: linear-gradient(90deg, rgba(212, 175, 55, 0.14), transparent 70%);
+}
+
+.bracket-team.has-medal--silver {
+  border-color: rgba(148, 163, 184, 0.7);
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.16), transparent 70%);
+}
+
+.bracket-team.has-medal--bronze {
+  border-color: rgba(180, 120, 60, 0.65);
+  background: linear-gradient(90deg, rgba(180, 120, 60, 0.14), transparent 70%);
 }
 
 .knockout-bracket--from-r16,
@@ -904,17 +1072,19 @@ header p {
   min-width: 220px;
 }
 
+/* Round labels: typography only — no fill/radius (those read as buttons). */
 .bracket-round__title {
-  font-size: var(--fs-xs);
-  font-weight: 800;
-  color: var(--navy);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  color: #6b7280;
   text-align: center;
   margin: 0;
-  padding: 8px 10px;
-  background: var(--light-gray);
-  border-radius: 8px;
+  padding: 0 2px 6px;
+  background: none;
+  border-radius: 0;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -940,11 +1110,16 @@ header p {
   background: var(--light-gray);
 }
 
+/* Final label: emphatic type, still not a chip/button — no underline rule. */
 .bracket-round--final .bracket-round__title {
-  font-size: var(--fs-sm);
-  padding: 10px 14px;
-  background: linear-gradient(145deg, var(--ua-green), var(--ua-dark-green));
-  color: #ffffff;
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  color: var(--ua-green);
+  padding: 0 2px 4px;
+  background: none;
+  border-bottom: none;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
 }
 
 .bracket-round--final .bracket-match {
@@ -956,7 +1131,7 @@ header p {
 }
 
 .bracket-round--final .bracket-team__name {
-  font-size: var(--fs-sm);
+  font-size: var(--fs-base);
 }
 
 .bracket-round__pairs {
@@ -1097,6 +1272,7 @@ header p {
 .bracket-team__name {
   flex: 1 1 auto;
   min-width: 0;
+  font-family: var(--font-body);
   font-size: var(--fs-xs);
   font-weight: 700;
   color: var(--navy);
@@ -1159,6 +1335,57 @@ header p {
     gap: 16px;
   }
 
+  /* Endgame phone: Final → third → semis (semis are context only). */
+  .knockout-bracket--endgame .bracket-center {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "final final"
+      "third third"
+      "sf1 sf2";
+    gap: 12px;
+    width: 100%;
+  }
+
+  .knockout-bracket--endgame .bracket-center__final-row,
+  .knockout-bracket--endgame .bracket-center__third {
+    display: contents;
+  }
+
+  .knockout-bracket--endgame .bracket-round--final {
+    grid-area: final;
+  }
+
+  .knockout-bracket--endgame .bracket-round--final .bracket-round__title {
+    font-size: var(--fs-lg);
+  }
+
+  .knockout-bracket--endgame .bracket-center__final-row > :nth-child(1) {
+    grid-area: sf1;
+  }
+
+  .knockout-bracket--endgame .bracket-center__final-row > :nth-child(3) {
+    grid-area: sf2;
+  }
+
+  .knockout-bracket--endgame .bracket-round--third {
+    grid-area: third;
+  }
+
+  .knockout-bracket--endgame .bracket-center__hint {
+    grid-column: 1 / -1;
+  }
+
+  .knockout-bracket--endgame .bracket-round--sf {
+    transform: none;
+    opacity: 0.7;
+  }
+
+  .knockout-bracket--endgame .bracket-center__third {
+    max-width: none;
+    width: 100%;
+  }
+
   .bracket-half {
     gap: 16px;
   }
@@ -1178,6 +1405,12 @@ header p {
 
   .bracket-center {
     min-width: 180px;
+  }
+
+  .knockout-bracket--endgame .bracket-center,
+  .knockout-bracket--endgame .bracket-round,
+  .knockout-bracket--endgame .bracket-match {
+    min-width: 0;
   }
 
   /* Mobile cascade stacks the center, so horizontal arms get messy — hide overlay. */
@@ -1205,8 +1438,21 @@ header p {
     min-width: min(100%, 520px);
   }
 
+  .knockout-bracket--endgame .bracket-center {
+    min-width: 0;
+  }
+
+  .knockout-bracket--endgame .bracket-round,
+  .knockout-bracket--endgame .bracket-match {
+    min-width: 0;
+  }
+
   .bracket-round--final .bracket-match {
     min-width: 200px;
+  }
+
+  .knockout-bracket--endgame .bracket-round--final .bracket-match {
+    min-width: 0;
   }
 }
 
@@ -1420,11 +1666,61 @@ header p {
 }
 
 .name-field {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: var(--fs-xs);
   color: #6b7280;
+}
+
+.name-field__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.name-field__help {
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--navy);
+  font-size: var(--fs-2xs);
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.name-field__help:hover,
+.name-field__help[aria-expanded="true"] {
+  background: var(--navy);
+  color: var(--gold);
+  border-color: var(--navy);
+}
+
+.name-field__tip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 40;
+  max-width: min(280px, 80vw);
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--navy);
+  color: #ffffff;
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  line-height: 1.45;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
+}
+
+.name-field__tip[hidden] {
+  display: none;
 }
 
 .name-field input {
@@ -1521,10 +1817,12 @@ header p {
 
 .bracket-export__head h2 {
   margin: 0;
+  font-family: var(--font-heading);
   font-size: var(--fs-2xl);
 }
 
 .bracket-export__head span {
+  font-family: var(--font-heading);
   color: var(--ua-gold);
   font-weight: 700;
   font-size: var(--fs-xs);
@@ -1963,21 +2261,31 @@ header p {
   #authSection.login-hero {
     padding-top: 16px;
   }
-  /* Compact masthead: the account row wraps below the title; tame the display title */
+  /* Compact masthead: title left, account always right (never full-width wrap). */
   header {
-    padding: 10px 14px;
+    padding: 8px 12px;
   }
   header h1 {
-    font-size: var(--fs-xl);
+    font-size: clamp(0.95rem, 4.2vw, 1.2rem);
     font-weight: 600;
+    line-height: 1.18;
+  }
+  header p {
+    font-size: 0.7rem;
+    line-height: 1.3;
+  }
+  .header-actions {
+    flex: 0 0 auto;
+    max-width: min(132px, 34%);
+    gap: 6px;
+  }
+  .header-actions .btn-ghost {
+    padding: 5px 10px;
+    font-size: var(--fs-2xs);
   }
   .header-user {
     max-width: 100%;
-  }
-  /* The account row wraps full-width below the title, so push Sign Out to the right */
-  .header-actions {
-    flex: 1 1 100%;
-    justify-content: space-between;
+    font-size: 0.6rem;
   }
   /* Keep the action bar reachable while scrolling: a compact sticky bar holding
      just the secondary actions. Submit, progress, and status live in the fixed
@@ -2043,7 +2351,17 @@ header p {
     padding-bottom: calc(84px + env(safe-area-inset-bottom));
   }
   .feedback-fab {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+  /* Only lift the FAB when the group-stage mobile submit bar is actually showing. */
+  body.has-submit-bar-mobile .feedback-fab {
     bottom: calc(108px + env(safe-area-inset-bottom));
+  }
+  body.has-submit-bar-mobile {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  body:not(.has-submit-bar-mobile) {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
   }
 }
 
