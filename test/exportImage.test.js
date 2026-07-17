@@ -27,8 +27,8 @@ test('personalizedFilename slugifies the name and prefixes the dated base', () =
 });
 
 test('officialBracketTitle uses the name, with a neutral fallback when blank', () => {
-  assert.equal(officialBracketTitle('Kobe'), "Kobe's WC finals predictions");
-  assert.equal(officialBracketTitle('   '), 'My WC finals predictions');
+  assert.equal(officialBracketTitle('Kobe'), "Kobe's World Cup Finals Predictions");
+  assert.equal(officialBracketTitle('   '), 'My World Cup Finals Predictions');
 });
 
 test('officialBracketFilename slugifies the name and prefixes the dated base', () => {

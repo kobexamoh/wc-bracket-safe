@@ -19,7 +19,7 @@ import { drawBracketConnectors } from './bracketConnectors.js';
 const EXPORT_WIDTH = 1024;
 const KNOCKOUT_EXPORT_WIDTH = 1920;
 /** Official Final Round export: low floor; fitKnockoutExportWidth grows to content. */
-const OFFICIAL_ENDGAME_EXPORT_WIDTH = 880;
+const OFFICIAL_ENDGAME_EXPORT_WIDTH = 960;
 const KNOCKOUT_EXPORT_PAD = 48;
 
 /** Dated, collision-resistant filename, e.g. `wc-bracket-2026-06-17.png`. */
@@ -54,7 +54,7 @@ export function personalizedFilename(name = '', date = new Date()) {
 /** Card title for the official Final Round export. */
 export function officialBracketTitle(name = '') {
   const trimmed = String(name).trim();
-  return trimmed ? `${trimmed}'s WC finals predictions` : 'My WC finals predictions';
+  return trimmed ? `${trimmed}'s World Cup Finals Predictions` : 'My World Cup Finals Predictions';
 }
 
 /** Dated filename for the official Final Round PNG. */

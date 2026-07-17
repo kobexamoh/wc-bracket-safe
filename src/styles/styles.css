@@ -680,7 +680,7 @@ header p {
 }
 
 .bracket-export--knockout .knockout-bracket--endgame {
-  max-width: 880px;
+  max-width: 980px;
   width: 100%;
   margin-inline: auto;
 }
@@ -688,13 +688,18 @@ header p {
 .bracket-export--knockout .knockout-bracket--endgame .bracket-center {
   min-width: 0;
   width: 100%;
-  max-width: 820px;
+  max-width: 920px;
 }
 
-/* Export: don't shrink semis with transform — keeps names readable in the PNG. */
+/* Export: keep semis readable (full names, no scale shrink). */
 .bracket-export--knockout .knockout-bracket--endgame .bracket-round--sf {
   transform: none;
-  opacity: 0.78;
+  opacity: 0.8;
+}
+
+.bracket-export--knockout .knockout-bracket--endgame .bracket-round--sf .bracket-team__name {
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .bracket-export--knockout .bracket-lines {
@@ -891,7 +896,7 @@ header p {
   justify-content: center;
   min-width: 0;
   width: 100%;
-  max-width: 960px;
+  max-width: 1040px;
   margin-inline: auto;
   gap: 0;
   padding-inline: 8px;
@@ -900,16 +905,17 @@ header p {
 .knockout-bracket--endgame .bracket-center {
   min-width: 0;
   width: 100%;
-  max-width: 900px;
+  max-width: 980px;
   padding: 0;
 }
 
-/* ~12-col metaphor: SF ~1.5 | Final ~9 | SF ~1.5 — semis are context only. */
+/* ~12-col metaphor: SF ~2.25 | Final ~7.5 | SF ~2.25 — Final still dominant,
+   but SF cols wide enough for "Argentina" / "England" without ellipsis. */
 .knockout-bracket--endgame .bracket-center__final-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 9.5fr) minmax(0, 1.25fr);
+  grid-template-columns: minmax(8rem, 2.25fr) minmax(0, 7.5fr) minmax(8rem, 2.25fr);
   align-items: center;
-  gap: clamp(6px, 1.2vw, 14px);
+  gap: clamp(8px, 1.4vw, 16px);
   width: 100%;
 }
 
@@ -925,11 +931,9 @@ header p {
   width: 100%;
 }
 
-/* Shrink locked semis so Final + third read as the main picks. */
+/* Semis stay secondary (muted) but not scale-shrunk — scale was clipping names. */
 .knockout-bracket--endgame .bracket-round--sf {
-  opacity: 0.72;
-  transform: scale(0.92);
-  transform-origin: center center;
+  opacity: 0.78;
 }
 
 .knockout-bracket--endgame .bracket-round--sf .bracket-round__title {
@@ -941,25 +945,27 @@ header p {
 }
 
 .knockout-bracket--endgame .bracket-round--sf .bracket-match {
-  padding: 4px 5px;
+  padding: 5px 6px;
   border-radius: 6px;
   box-shadow: none;
 }
 
 .knockout-bracket--endgame .bracket-round--sf .bracket-team {
-  padding: 3px 5px;
-  gap: 4px;
+  padding: 4px 6px;
+  gap: 5px;
   margin-top: 3px;
 }
 
 .knockout-bracket--endgame .bracket-round--sf .bracket-team__flag {
-  width: 0.85rem;
+  width: 0.9rem;
   height: auto;
 }
 
 .knockout-bracket--endgame .bracket-round--sf .bracket-team__name {
-  font-size: var(--fs-2xs);
+  font-size: 0.72rem;
   font-weight: 600;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .knockout-bracket--endgame .bracket-round--third {
