@@ -32,10 +32,14 @@ function renderTeamButton(match, side, slot, winner, { locked = false, flagExt =
   const isWinner = winner === side;
   const isLoser = locked && winner && winner !== side;
   const disabled = !slot.team || locked;
+  const medal = podiumMedalFor(match.id, side, winner);
+  const medalHtml = medal
+    ? `<span class="bracket-team__medal bracket-team__medal--${medal.place}" title="${esc(medal.label)}" aria-label="${esc(medal.label)}">${medal.glyph}</span>`
+    : '';
   return `
     <button
       type="button"
-      class="bracket-team${isWinner ? ' winner' : ''}${isLoser ? ' loser' : ''}${disabled ? ' is-empty' : ''}${locked ? ' is-locked' : ''}"
+      class="bracket-team${isWinner ? ' winner' : ''}${isLoser ? ' loser' : ''}${disabled ? ' is-empty' : ''}${locked ? ' is-locked' : ''}${medal ? ` has-medal has-medal--${medal.place}` : ''}"
       data-match="${match.id}"
       data-side="${side}"
       aria-pressed="${isWinner ? 'true' : 'false'}"
@@ -43,8 +47,26 @@ function renderTeamButton(match, side, slot, winner, { locked = false, flagExt =
     >
       ${renderFlag(slot.team, flagExt)}
       <span class="bracket-team__name">${esc(slot.team || 'TBD')}</span>
+      ${medalHtml}
     </button>
   `;
+}
+
+/**
+ * Podium medals only on Final (gold/silver) and third-place (bronze) once picked.
+ * Semis stay unmarked so locked SF cards don't inherit Final medals.
+ */
+export function podiumMedalFor(matchId, side, winner) {
+  if (!winner || (side !== 'A' && side !== 'B')) return null;
+  if (matchId === 'M104') {
+    return winner === side
+      ? { place: 'gold', glyph: '🥇', label: 'Champion pick' }
+      : { place: 'silver', glyph: '🥈', label: 'Runner-up pick' };
+  }
+  if (matchId === 'M103' && winner === side) {
+    return { place: 'bronze', glyph: '🥉', label: 'Third-place pick' };
+  }
+  return null;
 }
 
 function renderMatchCard(match, winner, { locked = false, flagExt = 'svg' } = {}) {
@@ -117,11 +139,15 @@ function renderRoundTitle(title, { qfHelp = false } = {}) {
   return `<h2 class="bracket-round__title">${title}${infoBtn}</h2>`;
 }
 
-function renderSingleMatchColumn(title, match, winners, { emphasis = false, lockedSet = new Set(), flagExt = 'svg' } = {}) {
+function renderSingleMatchColumn(title, match, winners, { emphasis = false, role = '', lockedSet = new Set(), flagExt = 'svg' } = {}) {
   if (!match) return '';
-  const mod = emphasis ? ' bracket-round--final' : '';
+  const mods = [
+    emphasis || role === 'final' ? ' bracket-round--final' : '',
+    role === 'sf' ? ' bracket-round--sf' : '',
+    role === 'third' ? ' bracket-round--third' : '',
+  ].join('');
   return `
-    <section class="bracket-round bracket-round--solo${mod}">
+    <section class="bracket-round bracket-round--solo${mods}">
       ${renderRoundTitle(title)}
       <div class="bracket-round__pairs">
         ${renderMatchCard(match, winners[match.id], { locked: lockedSet.has(match.id), flagExt })}
@@ -162,12 +188,12 @@ function renderCenterColumn(bracket, winners, lockedSet, flagExt = 'svg') {
   return `
     <div class="bracket-center">
       <div class="bracket-center__final-row">
-        ${renderSingleMatchColumn('Semi-final', m101, winners, { lockedSet, flagExt })}
-        ${renderSingleMatchColumn('Final', finalMatch, winners, { emphasis: true, lockedSet, flagExt })}
-        ${renderSingleMatchColumn('Semi-final', m102, winners, { lockedSet, flagExt })}
+        ${renderSingleMatchColumn('Semi-final', m101, winners, { role: 'sf', lockedSet, flagExt })}
+        ${renderSingleMatchColumn('Final', finalMatch, winners, { role: 'final', lockedSet, flagExt })}
+        ${renderSingleMatchColumn('Semi-final', m102, winners, { role: 'sf', lockedSet, flagExt })}
       </div>
       <div class="bracket-center__third${bothSfPicked ? '' : ' bracket-center__third--locked'}">
-        ${renderSingleMatchColumn('Third-place match', thirdMatch, winners, { lockedSet, flagExt })}
+        ${renderSingleMatchColumn('Third-place match', thirdMatch, winners, { role: 'third', lockedSet, flagExt })}
         ${bothSfPicked ? '' : '<p class="bracket-center__hint">Pick both semi-finals to unlock the third-place match.</p>'}
       </div>
     </div>
@@ -180,14 +206,17 @@ function renderCenterColumn(bracket, winners, lockedSet, flagExt = 'svg') {
  *
  * options.startRound: 'r32' | 'r16' | 'qf' | 'sf'
  *   Truncates early rounds (Official Bracket uses 'sf' in the endgame).
+ * Endgame (sf) drops R32–QF columns, skips the swipe hint, and omits SVG arms —
+ * the center strip alone should fit every viewport without horizontal scroll.
  */
 export function renderKnockoutTree(bracket, winners = {}, options = {}) {
   const lockedMatches = options.lockedMatches ?? new Set();
   const flagExt = options.flagExt ?? 'svg';
   const hidePodiumCta = options.hidePodiumCta ?? false;
-  const hideScrollHint = options.hideScrollHint ?? false;
   const startRound = normalizeStartRound(options.startRound);
-  const showHalves = startRound !== 'sf';
+  const isEndgame = startRound === 'sf';
+  const hideScrollHint = options.hideScrollHint ?? isEndgame;
+  const showHalves = !isEndgame;
   const podiumBtn = !hidePodiumCta && bracket.championTeam
     ? `<div class="knockout-podium-cta"><button type="button" class="btn btn-primary btn-sm" id="viewPodiumBtn">View your podium picks</button></div>`
     : '';
@@ -196,14 +225,18 @@ export function renderKnockoutTree(bracket, winners = {}, options = {}) {
     : `<p class="knockout-scroll-hint" hidden>Swipe or scroll sideways to see the full bracket</p>`;
   const left = showHalves ? renderHalf('left', bracket, winners, lockedMatches, flagExt, startRound) : '';
   const right = showHalves ? renderHalf('right', bracket, winners, lockedMatches, flagExt, startRound) : '';
-  const roundMod = startRound === 'sf' ? ' knockout-bracket--endgame' : ` knockout-bracket--from-${startRound}`;
+  const roundMod = isEndgame ? ' knockout-bracket--endgame' : ` knockout-bracket--from-${startRound}`;
+  const canvasMod = isEndgame ? ' knockout-canvas--endgame' : '';
+  const linesSvg = isEndgame
+    ? ''
+    : '<svg class="bracket-lines" aria-hidden="true" focusable="false"></svg>';
 
   return `
-    <div class="knockout-canvas">
+    <div class="knockout-canvas${canvasMod}">
       ${scrollHint}
       <div class="knockout-scroll">
         <div class="knockout-bracket${roundMod}">
-          <svg class="bracket-lines" aria-hidden="true" focusable="false"></svg>
+          ${linesSvg}
           ${left}
           ${renderCenterColumn(bracket, winners, lockedMatches, flagExt)}
           ${right}

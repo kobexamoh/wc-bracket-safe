@@ -18,6 +18,8 @@ import { drawBracketConnectors } from './bracketConnectors.js';
 
 const EXPORT_WIDTH = 1024;
 const KNOCKOUT_EXPORT_WIDTH = 1920;
+/** Official Final Round export: low floor; fitKnockoutExportWidth grows to content. */
+const OFFICIAL_ENDGAME_EXPORT_WIDTH = 880;
 const KNOCKOUT_EXPORT_PAD = 48;
 
 /** Dated, collision-resistant filename, e.g. `wc-bracket-2026-06-17.png`. */
@@ -49,18 +51,18 @@ export function personalizedFilename(name = '', date = new Date()) {
   return slug ? `${slug}-${base}` : base;
 }
 
-/** Card title for the official (real-results) knockout bracket export. */
+/** Card title for the official Final Round export. */
 export function officialBracketTitle(name = '') {
   const trimmed = String(name).trim();
-  return trimmed ? `${trimmed}'s Official WC Bracket` : 'My Official WC Bracket';
+  return trimmed ? `${trimmed}'s WC finals predictions` : 'My WC finals predictions';
 }
 
-/** Dated filename for the official bracket PNG, e.g. `amoh-official-wc-bracket-2026-07-06.png`. */
+/** Dated filename for the official Final Round PNG. */
 export function officialBracketFilename(name = '', date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-  const base = `official-wc-bracket-${year}-${month}-${day}.png`;
+  const base = `wc-finals-predictions-${year}-${month}-${day}.png`;
   const slug = nameSlug(name);
   return slug ? `${slug}-${base}` : base;
 }
@@ -123,14 +125,18 @@ function buildKnockoutExportNode(doc, bracket, winners, lockedMatches, width, ti
 }
 
 /**
- * Grow the export card to the knockout tree's natural width so html2canvas
- * doesn't clip the right half (common at a fixed 1920px on dense layouts).
+ * Size the export card to the knockout tree.
+ * Full-tree exports keep a high floor (don't clip). Endgame hugs content so
+ * we don't ship a 1920px-wide PNG with a ~700px Final Round in the middle.
  */
 function fitKnockoutExportWidth(node, minWidth) {
   const bracket = node.querySelector('.knockout-bracket');
   if (!bracket) return minWidth;
   const contentWidth = Math.ceil(bracket.scrollWidth) + KNOCKOUT_EXPORT_PAD;
-  const fitted = Math.max(minWidth, contentWidth);
+  const isEndgame = bracket.classList.contains('knockout-bracket--endgame');
+  const fitted = isEndgame
+    ? Math.max(560, contentWidth)
+    : Math.max(minWidth, contentWidth);
   node.style.width = `${fitted}px`;
   return fitted;
 }
@@ -213,7 +219,7 @@ export async function downloadOfficialKnockoutImage(bracket, winners, lockedMatc
     name = '',
     title = officialBracketTitle(name),
     filename = officialBracketFilename(name),
-    width: requestedWidth = KNOCKOUT_EXPORT_WIDTH,
+    width: requestedWidth = OFFICIAL_ENDGAME_EXPORT_WIDTH,
     startRound = 'sf',
   } = options;
 
@@ -233,7 +239,10 @@ export async function downloadOfficialKnockoutImage(bracket, winners, lockedMatc
     // Layout must settle before measuring width / drawing connector arms.
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const width = fitKnockoutExportWidth(node, requestedWidth);
-    drawBracketConnectors(node.querySelector('.knockout-bracket'));
+    const bracketRoot = node.querySelector('.knockout-bracket');
+    if (bracketRoot && !bracketRoot.classList.contains('knockout-bracket--endgame')) {
+      drawBracketConnectors(bracketRoot);
+    }
 
     const html2canvas = await loadHtml2canvas();
     const canvas = await html2canvas(node, {

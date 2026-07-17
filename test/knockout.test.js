@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { lookupAnnexCOpponents, buildRoundOf32Matches, buildKnockoutBracket, setWinner, applyWinnerPick, getPodiumPlacements } from '../src/js/knockout.js';
-import { renderKnockoutTree } from '../src/js/knockoutRender.js';
+import { renderKnockoutTree, podiumMedalFor } from '../src/js/knockoutRender.js';
 
 function makePicksWithKnownThirds() {
   // Minimal picks: provide a full 1st->4th order for only the groups we need
@@ -130,6 +130,7 @@ test('startRound sf renders endgame center strip only (no R32/R16/QF columns)', 
   const bracket = buildKnockoutBracket(picks, qualifying, {});
   const html = renderKnockoutTree(bracket, {}, { startRound: 'sf' });
 
+  assert.match(html, /knockout-canvas--endgame/);
   assert.match(html, /knockout-bracket--endgame/);
   assert.match(html, /bracket-round--final/);
   assert.match(html, /data-match="M101"/);
@@ -143,6 +144,8 @@ test('startRound sf renders endgame center strip only (no R32/R16/QF columns)', 
   assert.doesNotMatch(html, /data-match="M74"/);
   assert.doesNotMatch(html, /data-match="M89"/);
   assert.doesNotMatch(html, /data-match="M97"/);
+  assert.doesNotMatch(html, /knockout-scroll-hint/);
+  assert.doesNotMatch(html, /bracket-lines/);
 });
 
 test('startRound r16 omits Round of 32 columns but keeps R16 through final', () => {
@@ -200,6 +203,36 @@ test('podium placements resolve champion, runner-up, and third-place picks', () 
   assert.equal(podium.second, bracket.final[0].b.team);
   assert.equal(podium.third, bracket.thirdPlace[0].b.team);
   assert.equal(podium.fourth, bracket.thirdPlace[0].a.team);
+});
+
+test('podiumMedalFor awards gold/silver on Final and bronze on third-place winner', () => {
+  assert.equal(podiumMedalFor('M104', 'A', 'A')?.place, 'gold');
+  assert.equal(podiumMedalFor('M104', 'B', 'A')?.place, 'silver');
+  assert.equal(podiumMedalFor('M103', 'B', 'B')?.place, 'bronze');
+  assert.equal(podiumMedalFor('M103', 'A', 'B'), null);
+  assert.equal(podiumMedalFor('M101', 'A', 'A'), null);
+  assert.equal(podiumMedalFor('M104', 'A', null), null);
+});
+
+test('Final and third-place picks render medal badges beside team names', () => {
+  const picks = makePicksWithKnownThirds();
+  const qualifying = ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+  let winners = {};
+  winners = setWinner(winners, 'M101', 'A');
+  winners = setWinner(winners, 'M102', 'B');
+  winners = setWinner(winners, 'M104', 'A');
+  winners = setWinner(winners, 'M103', 'B');
+  const bracket = buildKnockoutBracket(picks, qualifying, winners);
+  const html = renderKnockoutTree(bracket, winners, { startRound: 'sf' });
+
+  assert.match(html, /bracket-team__medal--gold/);
+  assert.match(html, /bracket-team__medal--silver/);
+  assert.match(html, /bracket-team__medal--bronze/);
+  assert.match(html, /bracket-round--sf/);
+  assert.match(html, /bracket-round--third/);
+  // Semis must not inherit Final medals
+  const sfChunk = html.slice(html.indexOf('bracket-round--sf'), html.indexOf('bracket-round--final'));
+  assert.doesNotMatch(sfChunk, /bracket-team__medal/);
 });
 
 test('right half columns run QF inward to R32 on the outer edge', () => {

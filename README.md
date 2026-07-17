@@ -55,7 +55,7 @@ None of it was strictly necessary. All of it made the thing feel a little more a
 The calm days kept going:
 - **The magic link learned its way home.** It now returns you to wherever you asked from — localhost, a preview, or production — instead of always guessing the same place. A quiet, persistent note nudges people to open the link in the same browser they requested it from, which heads off the most common sign-in stumble.
 - **The screenshot got personal.** An optional name turns the exported card into "Your Name's D+C World Cup Bracket" and prefixes the saved file, so a pile of submissions is easy to tell apart.
-- **A typeface with intent.** The default system font gave way to Source Sans 3 — chosen on purpose, not by reflex — and the group-stage copy now explains that you really should rank all four, because the eight best third-placed teams advance too.
+- **A typeface with intent.** Headings and UI use **Alegreya Sans**; body copy and team names use **Faustina** (both free on Google Fonts). Swapped via CSS variables so the live UI and PNG export stay in sync.
 - **A run through a deterministic "AI-tells" detector** caught a few honest things: gold-on-green text that failed contrast, lines that ran too wide to read, and a progress bar animating the expensive way. All fixed. (It also, briefly, audited the Vercel login page instead of the app — previews are behind a gate.)
 
 ## VI. In Which the Edges Get Sanded
@@ -252,7 +252,7 @@ The launch did exactly one thing well and saved the rest for daylight:
 - **A celebratory finish — shipped.** Submitting now gets a confirmation moment and a brief, reduced-motion-aware confetti burst in green and gold (Chapter VIII).
 - **Cross-platform flags — shipped.** Real self-hosted SVG flags replaced the emoji, so nothing falls back to letter-boxes on Windows — in the live UI and the screenshot alike (Chapter IX).
 - **Login hero — shipped (Chapter X).** Swiss sign-in layout, pitch mini-animation, auth-confirm modal, Cursor-style arrow submit, warm cream background.
-- **Phase 2 — knockout + Official Bracket — mostly shipped.** Stage tabs, real-results Official Bracket, submit/export/Slack. Viewport polish ships SVG connector arms, export width fit, scroll cues, and an Official Bracket **endgame view** (semis → final) that fits a laptop without horizontal scroll.
+- **Phase 2 — knockout + Official Bracket — mostly shipped.** Stage tabs, real-results Official Bracket, submit/export/Slack. Viewport polish ships SVG connector arms, export width fit, scroll cues, and an Official Bracket **endgame view** (semis → final → third only — no R32/R16/QF, no sideways scroll; phone puts Final on top with semis side-by-side).
 - **Phase 3** — a scoring engine and a leaderboard, so the per-round prizes have something to measure. *(This is the part I promised coworkers out loud before building it, which is the traditional order of operations.)*
 
 ---
