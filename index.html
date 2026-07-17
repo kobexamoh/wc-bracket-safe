@@ -148,6 +148,7 @@
                         <div class="official-bracket-toolbar">
                             <span id="officialSaveStatus" class="save-status" role="status" aria-live="polite"></span>
                             <div class="official-bracket-actions">
+                                <button id="helpBtnOfficial" type="button" class="btn btn-ghost" aria-haspopup="dialog" title="How the Final Round works">How it works</button>
                                 <button id="officialExportBtn" type="button" class="btn btn-ghost" title="Download your official bracket as an image to share">Screenshot bracket (PNG)</button>
                                 <button id="viewOfficialPodiumBtn" type="button" class="btn btn-ghost" hidden title="See your 1st–4th podium picks">View podium picks</button>
                                 <button id="officialSubmitBtn" type="button" class="btn btn-primary" hidden title="Submit your official bracket picks (needs champion through 4th place)">Submit official picks</button>
@@ -173,26 +174,25 @@
         </div>
     </main>
 
-    <!-- How-it-works modal: onboarding for the bracket format + ranking mechanic -->
+    <!-- How-it-works modal: Final Round onboarding (group-stage explainer retired). -->
     <div id="helpModal" class="modal" hidden>
         <div class="modal__backdrop" data-close-help></div>
         <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="helpTitle" tabindex="-1">
             <div class="modal__head">
-                <h2 id="helpTitle">How this bracket works</h2>
+                <h2 id="helpTitle">How the Final Round works</h2>
                 <button type="button" class="modal__close" data-close-help aria-label="Close">&times;</button>
             </div>
             <div class="modal__body">
-                <p class="modal__lead">New to the World Cup format? Here's the 60-second version. Already know it? Just close this and start ranking.</p>
-                <h3>The format</h3>
-                <p>Each group has four teams that all play each other once. You're predicting how each group will finish — 1st through 4th.</p>
-                <h3>Who advances</h3>
-                <p>The top two in every group advance. This year there's also room for the <strong>8 best 3rd-place teams</strong> across all groups, so your 3rd-vs-4th call can matter once the knockouts are set.</p>
-                <p><a href="https://www.skysports.com/football/news/11095/13556635/world-cup-2026-third-place-standingslive-table-as-top-eight-sides-qualify-for-knockout-stage" target="_blank" rel="noopener noreferrer">Track the live third-place standings on Sky Sports →</a></p>
-                <h3>How to rank</h3>
-                <p>Click teams in your predicted order: the first click is 1st place, the next is 2nd, and so on. Click a ranked team again to clear it — the teams below shift up to fill the gap. Submit once every group has at least its top two.</p>
-                <p>Want a redo? Each group has its own <strong>Clear</strong> button, or use <strong>Deselect all</strong> to reset every group at once.</p>
+                <p class="modal__lead">We're at the end of the tournament. Here's what to do in under a minute.</p>
+                <h3>What's left</h3>
+                <p><strong>Spain vs Argentina</strong> in the Final. The locked semi-finals on either side just show how those two got here.</p>
+                <h3>How to pick</h3>
+                <p>Click the team you think wins the <strong>Final</strong> (champion). That automatically sets the other finalist as runner-up. Then click who you think wins the <strong>third-place match</strong> (France vs England).</p>
+                <p>Gold, silver, and bronze medals show up next to your picks as you go.</p>
+                <h3>Save &amp; share</h3>
+                <p>Add your name (for the screenshot / leaderboard), then use <strong>Screenshot bracket</strong> and <strong>Submit official picks</strong> when your podium is complete. You can update picks and re-submit anytime before the matches finish.</p>
                 <h3>Found a bug?</h3>
-                <p>Use the <strong>Report a bug</strong> button in the bottom-right corner to send feedback or flag anything that looks off.</p>
+                <p>Use the <strong>Report a bug</strong> button in the bottom-right corner to send feedback.</p>
             </div>
             <div class="modal__foot">
                 <button type="button" class="btn btn-primary" data-close-help>Got it</button>

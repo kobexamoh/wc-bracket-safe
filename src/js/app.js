@@ -249,7 +249,7 @@ const loginHelpBtn = document.getElementById('loginHelpBtn');
 const loginHelpStatus = document.getElementById('loginHelpStatus');
 const loginHelpHoneypot = document.getElementById('loginHelpHoneypot');
 const loginHeroFrame = document.getElementById('loginHeroFrame');
-const HELP_SEEN_KEY = 'wc-bracket:seen-help';
+const HELP_SEEN_KEY = 'wc-bracket:seen-help-final-round';
 
 const AUTH_SENT_HINT =
   'Check your email — open the sign-in link on this same device and browser.';
@@ -1684,6 +1684,8 @@ if (bracketEl) bracketEl.addEventListener('click', onBracketClick);
 
 // How-it-works modal: open from the header button; close via ×, "Got it", or backdrop.
 if (helpBtn) helpBtn.addEventListener('click', () => openModal(helpModal));
+const helpBtnOfficial = document.getElementById('helpBtnOfficial');
+if (helpBtnOfficial) helpBtnOfficial.addEventListener('click', () => openModal(helpModal));
 if (helpModal) {
   helpModal.querySelectorAll('[data-close-help]').forEach((el) => {
     el.addEventListener('click', () => closeModal(helpModal));
