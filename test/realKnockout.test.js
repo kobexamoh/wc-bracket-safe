@@ -79,7 +79,7 @@ describe('getLockedMatchIds', () => {
     assert.ok(locked.has('M100'), 'QF M100 should be locked');
     assert.ok(locked.has('M101'), 'SF M101 should be locked');
     assert.ok(locked.has('M102'), 'SF M102 should be locked');
-    assert.ok(!locked.has('M103'), 'M103 third-place should still be pickable');
+    assert.ok(locked.has('M103'), 'M103 third-place should be locked');
     assert.ok(!locked.has('M104'), 'M104 final should still be pickable');
   });
 });

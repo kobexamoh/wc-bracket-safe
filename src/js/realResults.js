@@ -86,6 +86,6 @@ export const REAL_MATCH_WINNERS = {
   'M102': 'Argentina',     // 2-1 vs England (Jul 15)
 
   // ── Third-place match (Jul 18) & Final (Jul 19) ───────────────────
-  // 'M103': 'team',
+  'M103': 'England',         // 6-4 vs France (Jul 18)
   // 'M104': 'team',
 };
