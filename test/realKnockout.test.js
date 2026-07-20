@@ -80,7 +80,7 @@ describe('getLockedMatchIds', () => {
     assert.ok(locked.has('M101'), 'SF M101 should be locked');
     assert.ok(locked.has('M102'), 'SF M102 should be locked');
     assert.ok(locked.has('M103'), 'M103 third-place should be locked');
-    assert.ok(!locked.has('M104'), 'M104 final should still be pickable');
+    assert.ok(locked.has('M104'), 'M104 final should be locked');
   });
 });
 
@@ -132,15 +132,8 @@ describe('applyRealWinnerPick', () => {
     assert.ok(!result.M73, 'Locked match M73 should not appear in user picks');
   });
 
-  it('allows picking an unlocked third-place / final match', () => {
+  it('refuses to change the locked final', () => {
     const result = applyRealWinnerPick({}, 'M104', 'A');
-    assert.equal(result.M104, 'A');
-  });
-
-  it('toggles off on same-side re-pick', () => {
-    const first = applyRealWinnerPick({}, 'M104', 'A');
-    assert.equal(first.M104, 'A');
-    const second = applyRealWinnerPick(first, 'M104', 'A');
-    assert.ok(!second.M104, 'Re-picking same side should clear');
+    assert.ok(!result.M104, 'Locked final should not appear in user picks');
   });
 });
